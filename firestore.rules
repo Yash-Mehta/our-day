@@ -1,0 +1,35 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isAuth() { return request.auth != null; }
+    function isHost() {
+      return isAuth() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'host';
+    }
+    function isOwner(uid) { return isAuth() && request.auth.uid == uid; }
+
+    match /config/inviteCode {
+      allow read: if isAuth();
+      allow write: if false;
+    }
+    match /users/{uid} {
+      allow read: if isAuth();
+      allow create, update: if isOwner(uid);
+    }
+    match /posts/{postId} {
+      allow read: if isAuth();
+      allow create, update, delete: if isHost();
+      match /comments/{commentId} {
+        allow read: if isAuth();
+        allow create: if isAuth();
+        allow delete: if isOwner(resource.data.authorId);
+      }
+      match /likes/{uid} {
+        allow read, write: if isOwner(uid);
+      }
+    }
+    match /schedule/{eventId} {
+      allow read: if isAuth();
+      allow write: if isHost();
+    }
+  }
+}
