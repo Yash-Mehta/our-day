@@ -16,10 +16,11 @@ service cloud.firestore {
 
     function isOwner(uid) { return isAuth() && request.auth.uid == uid; }
 
-    // ── Invite code index — read-only for lookup ──────────────────────────────
+    // ── Invite code index ─────────────────────────────────────────────────────
     match /weddingsByCode/{code} {
       allow read: if true;
-      allow write: if false;
+      allow create: if isAuth();
+      allow update, delete: if false;
     }
 
     // ── User index (maps uid → weddingIds) ────────────────────────────────────

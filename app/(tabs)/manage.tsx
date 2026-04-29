@@ -99,7 +99,7 @@ export default function ManageScreen() {
   const [events, setEvents] = useState<ScheduleItem[]>([]);
   const [loadingGuests, setLoadingGuests] = useState(true);
   const [loadingSchedule, setLoadingSchedule] = useState(true);
-  const { weddingId } = useAuthStore();
+  const { weddingId, firebaseUser } = useAuthStore();
 
   // Add form
   const [newFields, setNewFields] = useState(BLANK_EVENT);
@@ -255,7 +255,7 @@ export default function ManageScreen() {
             keyExtractor={(g) => g.uid}
             showsVerticalScrollIndicator={false}
             renderItem={({ item }) => (
-              <GuestRow uid={item.uid} user={item} onPromote={handlePromote} onDemote={handleDemote} onRemove={handleRemove} />
+              <GuestRow uid={item.uid} user={item} currentUid={firebaseUser?.uid} onPromote={handlePromote} onDemote={handleDemote} onRemove={handleRemove} />
             )}
             contentContainerStyle={styles.listContent}
             ListEmptyComponent={<Text style={styles.empty}>No guests yet</Text>}

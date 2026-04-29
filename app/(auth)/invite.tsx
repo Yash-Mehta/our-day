@@ -8,8 +8,6 @@ import {
   Alert,
   ScrollView,
   Animated,
-  ImageBackground,
-  Image,
   KeyboardAvoidingView,
   Platform,
   ActivityIndicator,
@@ -21,16 +19,15 @@ import { validateInviteCode, CodeIndexDoc } from '../../lib/firestore';
 import { SprigDivider } from '../../components/SprigDivider';
 import { theme } from '../../constants/theme';
 
-const HERO_URL =
-  'https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&w=800&q=80';
-
 export default function InviteScreen() {
   const [code, setCode] = useState('');
   const [loading, setLoading] = useState(false);
   const [preview, setPreview] = useState<CodeIndexDoc['preview'] | null>(null);
+  const [pendingResult, setPendingResult] = useState<{ weddingId: string; role: 'guest' | 'host' } | null>(null);
   const router = useRouter();
   const { setPendingRole, setPendingWeddingId } = useAuthStore();
   const fadeAnim = useRef(new Animated.Value(0)).current;
+  const previewAnim = useRef(new Animated.Value(0)).current;
   const scrollRef = useRef<ScrollView>(null);
 
   useEffect(() => {
@@ -46,13 +43,20 @@ export default function InviteScreen() {
       setPendingRole(result.role);
       setPendingWeddingId(result.weddingId);
       setPreview(result.preview);
-      router.push({
-        pathname: '/(auth)/register',
-        params: { code: code.trim().toUpperCase(), role: result.role, weddingId: result.weddingId },
-      });
+      setPendingResult({ weddingId: result.weddingId, role: result.role });
+      Animated.timing(previewAnim, { toValue: 1, duration: 400, useNativeDriver: true }).start();
+      setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 100);
     } else {
       Alert.alert('Invalid code', 'Please check the code and try again.');
     }
+  }
+
+  function handleContinue() {
+    if (!pendingResult) return;
+    router.push({
+      pathname: '/(auth)/register',
+      params: { code: code.trim().toUpperCase(), role: pendingResult.role, weddingId: pendingResult.weddingId },
+    });
   }
 
   return (
@@ -68,76 +72,82 @@ export default function InviteScreen() {
         bounces={false}
         keyboardShouldPersistTaps="handled">
 
-        <View style={styles.hero}>
-          <ImageBackground source={{ uri: HERO_URL }} style={styles.heroImage} resizeMode="cover">
-            <LinearGradient
-              colors={['rgba(42,29,23,0.10)', 'rgba(250,246,241,0)', 'rgba(250,246,241,1)']}
-              locations={[0, 0.4, 1]}
-              style={StyleSheet.absoluteFill}
-            />
-          </ImageBackground>
-        </View>
-
-        <Animated.View style={[styles.badge, { opacity: fadeAnim }]}>
-          <Text style={styles.badgeText}>You're invited</Text>
-        </Animated.View>
+        {/* Gradient header */}
+        <LinearGradient
+          colors={[theme.colors.countdownStart, theme.colors.countdownEnd]}
+          style={styles.hero}>
+          <Animated.View style={[styles.heroContent, { opacity: fadeAnim }]}>
+            <Text style={styles.appName}>Our Day</Text>
+            <Text style={styles.appTagline}>Your wedding, beautifully shared</Text>
+          </Animated.View>
+        </LinearGradient>
 
         <Animated.View style={[styles.card, { opacity: fadeAnim }]}>
-          <View style={{ marginBottom: 14, marginTop: 200 }}>
-            <View style={styles.logoCircle}>
-              <Image source={require('../../assets/logo.png')} style={styles.logoImage} resizeMode="cover" />
-            </View>
-          </View>
 
-          <Text style={styles.eyebrow}>Together with their families</Text>
-
-          {preview ? (
+          {/* Default state — generic */}
+          {!preview && (
             <>
-              <Text style={styles.nameDisplay}>{preview.coupleName.split(' & ')[0] ?? preview.coupleName}</Text>
-              <Text style={styles.and}>and</Text>
-              <Text style={styles.nameDisplay}>{preview.coupleName.split(' & ')[1] ?? ''}</Text>
-            </>
-          ) : (
-            <>
-              <Text style={styles.nameDisplay}>—</Text>
-              <Text style={styles.and}>and</Text>
-              <Text style={styles.nameDisplay}>—</Text>
+              <Text style={styles.cardTitle}>You're invited</Text>
+              <Text style={styles.cardSub}>Enter the invite code from your couple to join their wedding album.</Text>
+              <View style={styles.dividerWrap}>
+                <SprigDivider color={theme.colors.accent} />
+              </View>
             </>
           )}
 
-          <View style={styles.dividerWrap}>
-            <SprigDivider color={theme.colors.accent} />
-          </View>
-
+          {/* After code validates — show couple preview */}
           {preview && (
-            <>
-              <Text style={styles.dateStamp}>{preview.dateStamp}</Text>
-              <Text style={styles.venue}>{preview.venue}</Text>
-            </>
+            <Animated.View style={{ opacity: previewAnim }}>
+              <Text style={styles.eyebrow}>Together with their families</Text>
+              <Text style={styles.nameDisplay}>{preview.coupleName.split(' & ')[0] ?? preview.coupleName}</Text>
+              <Text style={styles.andText}>and</Text>
+              <Text style={styles.nameDisplay}>{preview.coupleName.split(' & ')[1] ?? ''}</Text>
+              <View style={styles.dividerWrap}>
+                <SprigDivider color={theme.colors.accent} />
+              </View>
+              {preview.dateStamp && <Text style={styles.dateStamp}>{preview.dateStamp}</Text>}
+              {preview.venue && <Text style={styles.venue}>{preview.venue}</Text>}
+            </Animated.View>
           )}
 
           <TextInput
             style={styles.input}
             value={code}
-            onChangeText={setCode}
+            onChangeText={(t) => {
+              setCode(t);
+              if (preview) {
+                setPreview(null);
+                setPendingResult(null);
+                previewAnim.setValue(0);
+              }
+            }}
             placeholder="INVITE CODE"
             placeholderTextColor={theme.colors.ink4}
             autoCapitalize="characters"
             autoCorrect={false}
-            returnKeyType="join"
-            onSubmitEditing={handleJoin}
+            returnKeyType="go"
+            onSubmitEditing={preview ? handleContinue : handleJoin}
             onFocus={() => setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 300)}
           />
 
-          <TouchableOpacity
-            style={styles.button}
-            onPress={handleJoin}
-            disabled={loading}
-            activeOpacity={0.85}>
-            {loading
-              ? <ActivityIndicator color={theme.colors.bg} />
-              : <Text style={styles.buttonText}>Open the album</Text>}
-          </TouchableOpacity>
+          {!preview ? (
+            <TouchableOpacity
+              style={styles.button}
+              onPress={handleJoin}
+              disabled={loading}
+              activeOpacity={0.85}>
+              {loading
+                ? <ActivityIndicator color={theme.colors.bg} />
+                : <Text style={styles.buttonText}>Open the album</Text>}
+            </TouchableOpacity>
+          ) : (
+            <TouchableOpacity
+              style={styles.button}
+              onPress={handleContinue}
+              activeOpacity={0.85}>
+              <Text style={styles.buttonText}>Join this wedding</Text>
+            </TouchableOpacity>
+          )}
 
           <TouchableOpacity style={styles.signInLink} onPress={() => router.push('/(auth)/login')}>
             <Text style={styles.signInText}>Already have an account? <Text style={styles.signInBold}>Sign in</Text></Text>
@@ -155,37 +165,49 @@ export default function InviteScreen() {
 const styles = StyleSheet.create({
   scroll: { flex: 1, backgroundColor: theme.colors.bg },
   container: { flexGrow: 1 },
-  hero: { height: 340, overflow: 'hidden' },
-  heroImage: { flex: 1 },
-  badge: {
-    position: 'absolute',
-    top: 200,
-    alignSelf: 'center',
-    backgroundColor: 'rgba(250,246,241,0.94)',
-    paddingHorizontal: 16,
-    paddingVertical: 7,
-    borderRadius: theme.radii.pill,
-    borderWidth: 0.5,
-    borderColor: 'rgba(122,74,63,0.2)',
-    zIndex: 4,
+  hero: {
+    height: 220,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingTop: 40,
   },
-  badgeText: {
-    fontSize: 10,
-    letterSpacing: 2.5,
-    fontWeight: '600',
-    textTransform: 'uppercase',
-    color: theme.colors.accentDeep,
+  heroContent: { alignItems: 'center' },
+  appName: {
+    fontSize: 52,
+    fontFamily: theme.fonts.serif,
+    color: theme.colors.bg,
+    letterSpacing: -0.5,
+  },
+  appTagline: {
+    fontSize: 13,
+    color: 'rgba(250,246,241,0.75)',
     fontFamily: theme.fonts.sans,
+    marginTop: 6,
+    letterSpacing: 0.3,
   },
   card: {
     flex: 1,
     paddingHorizontal: 32,
+    paddingTop: 36,
     paddingBottom: 40,
     alignItems: 'center',
-    marginTop: -50,
   },
-  logoCircle: { width: 150, height: 150, borderRadius: 75, overflow: 'hidden' },
-  logoImage: { width: 150, height: 150 },
+  cardTitle: {
+    fontSize: 26,
+    fontFamily: theme.fonts.serif,
+    color: theme.colors.ink,
+    marginBottom: 10,
+    textAlign: 'center',
+  },
+  cardSub: {
+    fontSize: 14,
+    color: theme.colors.ink3,
+    fontFamily: theme.fonts.sans,
+    textAlign: 'center',
+    lineHeight: 20,
+    marginBottom: 24,
+    paddingHorizontal: 8,
+  },
   eyebrow: {
     fontSize: 10,
     fontWeight: '600',
@@ -193,37 +215,43 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
     color: theme.colors.ink3,
     fontFamily: theme.fonts.sans,
-    marginBottom: 6,
+    marginBottom: 10,
+    textAlign: 'center',
   },
   nameDisplay: {
-    fontSize: 54,
+    fontSize: 48,
     fontFamily: theme.fonts.serif,
     fontWeight: '500',
     color: theme.colors.ink,
-    lineHeight: 58,
+    lineHeight: 54,
+    textAlign: 'center',
   },
-  and: {
-    fontSize: 24,
+  andText: {
+    fontSize: 22,
     fontFamily: theme.fonts.serifItalic,
     fontStyle: 'italic',
     color: theme.colors.accent,
-    marginVertical: 2,
+    marginVertical: 4,
+    textAlign: 'center',
   },
-  dividerWrap: { width: '60%', marginVertical: 14 },
+  dividerWrap: { width: '60%', marginVertical: 16 },
   dateStamp: {
     fontSize: 12,
     fontWeight: '600',
-    letterSpacing: 2.5,
+    letterSpacing: 2,
     textTransform: 'uppercase',
     color: theme.colors.ink2,
     marginBottom: 6,
+    fontFamily: theme.fonts.sans,
+    textAlign: 'center',
   },
   venue: {
-    fontSize: 11,
+    fontSize: 12,
     fontStyle: 'italic',
     color: theme.colors.ink3,
-    marginBottom: 24,
+    marginBottom: 20,
     fontFamily: theme.fonts.serifItalic,
+    textAlign: 'center',
   },
   input: {
     width: '100%',
@@ -245,7 +273,7 @@ const styles = StyleSheet.create({
     maxWidth: 280,
     backgroundColor: theme.colors.accent,
     borderRadius: theme.radii.pill,
-    paddingVertical: 13,
+    paddingVertical: 14,
     paddingHorizontal: 22,
     alignItems: 'center',
     shadowColor: theme.colors.accent,

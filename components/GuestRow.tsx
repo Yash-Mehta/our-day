@@ -6,12 +6,14 @@ import { UserDoc } from '../lib/firestore';
 interface Props {
   uid: string;
   user: UserDoc;
+  currentUid?: string;
   onPromote?: (uid: string) => void;
   onDemote?: (uid: string) => void;
   onRemove?: (uid: string) => void;
 }
 
-export function GuestRow({ uid, user, onPromote, onDemote, onRemove }: Props) {
+export function GuestRow({ uid, user, currentUid, onPromote, onDemote, onRemove }: Props) {
+  const isSelf = uid === currentUid;
   function confirmRemove() {
     Alert.alert(
       'Remove guest',
@@ -52,17 +54,17 @@ export function GuestRow({ uid, user, onPromote, onDemote, onRemove }: Props) {
         <Text style={styles.blurb} numberOfLines={1}>{user.howTheyKnow}</Text>
       </View>
       <View style={styles.actions}>
-        {user.role === 'host' && onDemote && (
+        {!isSelf && user.role === 'host' && onDemote && (
           <TouchableOpacity style={styles.demoteBtn} onPress={confirmDemote} activeOpacity={0.7}>
-            <Text style={styles.demoteBtnText}>Guest</Text>
+            <Text style={styles.demoteBtnText}>Demote</Text>
           </TouchableOpacity>
         )}
-        {user.role !== 'host' && onPromote && (
+        {!isSelf && user.role !== 'host' && onPromote && (
           <TouchableOpacity style={styles.promoteBtn} onPress={confirmPromote} activeOpacity={0.7}>
             <Text style={styles.promoteBtnText}>Host</Text>
           </TouchableOpacity>
         )}
-        {onRemove && (
+        {!isSelf && onRemove && (
           <TouchableOpacity style={styles.removeBtn} onPress={confirmRemove} activeOpacity={0.7}>
             <Text style={styles.removeBtnText}>✕</Text>
           </TouchableOpacity>
