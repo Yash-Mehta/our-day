@@ -1,4 +1,5 @@
-import { useEffect } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { Animated, StyleSheet, Text, View } from 'react-native';
 import { Slot, useRouter, useSegments } from 'expo-router';
 import { onAuthStateChanged } from 'firebase/auth';
 import { useFonts } from 'expo-font';
@@ -14,6 +15,7 @@ import { useAuthStore } from '../store/authStore';
 import { useWeddingConfig } from '../hooks/useWeddingConfig';
 import { registerForPushNotifications } from '../lib/notifications';
 import { tryAutoLogin, clearCredentials, getWeddingId, saveWeddingId } from '../lib/secureAuth';
+import { theme } from '../constants/theme';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -30,6 +32,24 @@ export default function RootLayout() {
   } = useAuthStore();
   const router = useRouter();
   const segments = useSegments();
+  const [showOverlay, setShowOverlay] = useState(false);
+  const overlayOpacity = useRef(new Animated.Value(0)).current;
+  const hasTransitioned = useRef(false);
+
+  function playEntryTransition(navigate: () => void) {
+    if (hasTransitioned.current) { navigate(); return; }
+    hasTransitioned.current = true;
+    setShowOverlay(true);
+    overlayOpacity.setValue(1);
+    navigate();
+    setTimeout(() => {
+      Animated.timing(overlayOpacity, {
+        toValue: 0,
+        duration: 900,
+        useNativeDriver: true,
+      }).start(() => setShowOverlay(false));
+    }, 500);
+  }
 
   const [fontsLoaded] = useFonts({
     'CormorantGaramond-Medium': CormorantGaramond_500Medium,
@@ -93,7 +113,11 @@ export default function RootLayout() {
     if (!firebaseUser && !inAuth && !inOnboarding) {
       router.replace('/');
     } else if (firebaseUser && inAuth) {
-      router.replace(isProfileComplete ? '/(tabs)/feed' : '/(auth)/profile-setup');
+      if (isProfileComplete) {
+        playEntryTransition(() => router.replace('/(tabs)/feed'));
+      } else {
+        router.replace('/(auth)/profile-setup');
+      }
     } else if (firebaseUser && !inOnboarding && !isProfileComplete) {
       router.replace('/(auth)/profile-setup');
     }
@@ -101,5 +125,29 @@ export default function RootLayout() {
 
   if (!fontsLoaded) return null;
 
-  return <Slot />;
+  return (
+    <View style={{ flex: 1 }}>
+      <Slot />
+      {showOverlay && (
+        <Animated.View style={[StyleSheet.absoluteFill, styles.overlay, { opacity: overlayOpacity }]}>
+          <Text style={styles.overlayTitle}>Our Day</Text>
+        </Animated.View>
+      )}
+    </View>
+  );
 }
+
+const styles = StyleSheet.create({
+  overlay: {
+    backgroundColor: theme.colors.bg,
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 999,
+  },
+  overlayTitle: {
+    fontSize: 52,
+    fontFamily: theme.fonts.serif,
+    color: theme.colors.ink,
+    letterSpacing: -0.5,
+  },
+});
