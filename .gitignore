@@ -45,3 +45,4 @@ yarn-error.*
 .claude-flow/
 .swarm/
 serviceAccountKey.json
+ruvector.db
