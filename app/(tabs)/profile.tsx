@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useRouter } from 'expo-router';
 import {
   View,
   Text,
@@ -22,6 +23,7 @@ import { Avatar } from '../../components/Avatar';
 import { theme } from '../../constants/theme';
 
 export default function ProfileScreen() {
+  const router = useRouter();
   const { firebaseUser, userDoc, weddingId, setUserDoc } = useAuthStore();
   const [displayName, setDisplayName] = useState(userDoc?.displayName ?? '');
   const [howTheyKnow, setHowTheyKnow] = useState(userDoc?.howTheyKnow ?? '');
@@ -134,7 +136,7 @@ export default function ProfileScreen() {
             style={[styles.input, styles.multiline]}
             value={howTheyKnow}
             onChangeText={(t) => setHowTheyKnow(t.slice(0, 100))}
-            placeholder="e.g. Friends from college, Yash's cousin…"
+            placeholder="e.g. College friends, cousin of the bride…"
             placeholderTextColor={theme.colors.ink4}
             multiline
             numberOfLines={3}
@@ -157,6 +159,10 @@ export default function ProfileScreen() {
 
         <TouchableOpacity style={styles.signOutBtn} onPress={handleSignOut} activeOpacity={0.7}>
           <Text style={styles.signOutText}>Sign out</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity style={styles.legalBtn} onPress={() => router.push('/privacy')} activeOpacity={0.7}>
+          <Text style={styles.legalText}>Privacy Policy</Text>
         </TouchableOpacity>
       </ScrollView>
     </ScreenWrapper>
@@ -233,4 +239,6 @@ const styles = StyleSheet.create({
   saveBtnText: { color: theme.colors.bg, fontSize: 15, fontWeight: '600', fontFamily: theme.fonts.sans },
   signOutBtn: { marginTop: 20, alignItems: 'center', paddingVertical: 12 },
   signOutText: { fontSize: 14, color: theme.colors.ink3, fontFamily: theme.fonts.sans },
+  legalBtn: { alignItems: 'center', paddingVertical: 8 },
+  legalText: { fontSize: 12, color: theme.colors.ink4, fontFamily: theme.fonts.sans, textDecorationLine: 'underline' },
 });

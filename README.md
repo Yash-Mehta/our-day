@@ -1,8 +1,8 @@
 # Our Day
 
-A private wedding app for Yash & Vaani — Hard Rock Hotel & Casino, Punta Cana · December 5, 2026.
+A private, invite-only wedding app for couples and their guests.
 
-Guests join with an invite code and get access to the live photo feed, wedding weekend schedule, and registry. Hosts get an admin panel to post announcements, manage the schedule, and moderate guests.
+Couples create their wedding in minutes and share invite codes with guests. Guests join and get access to a live photo feed, the weekend schedule, and the registry. Hosts get an admin panel to post announcements, manage the schedule, and moderate guests.
 
 ---
 
@@ -11,10 +11,10 @@ Guests join with an invite code and get access to the live photo feed, wedding w
 - **Invite-only access** — guest and host roles via separate invite codes
 - **Live feed** — photo posts and announcements with likes, comments, and host pin/delete controls
 - **Countdown** — live days · hours · minutes banner counting down to the ceremony
-- **Schedule** — full weekend itinerary (Dec 2–5) with event icons, dress codes, and countdown to next event
-- **Host admin panel** — add/edit/reorder schedule events, promote/demote guests
+- **Schedule** — full wedding weekend itinerary with event icons, dress codes, and live countdown to the next event
+- **Host admin panel** — add/edit/reorder schedule events, promote/demote guests, upload wedding logo
 - **Push notifications** — new posts and comments via FCM
-- **Password reset** — custom branded email via Gmail + Cloud Functions
+- **Multi-tenant** — each wedding is fully isolated; one app serves many couples
 
 ---
 
@@ -26,7 +26,6 @@ Guests join with an invite code and get access to the live photo feed, wedding w
 | Backend | Firebase (Auth · Firestore · Storage · Cloud Functions v2) |
 | State | Zustand |
 | Notifications | Firebase Cloud Messaging |
-| Email | Nodemailer via Gmail SMTP |
 
 ---
 
@@ -35,7 +34,7 @@ Guests join with an invite code and get access to the live photo feed, wedding w
 ### Prerequisites
 
 - Node 18+
-- Expo Go app on your phone, or an iOS/Android simulator
+- Expo Go app or iOS/Android simulator
 - Firebase project with Auth, Firestore, Storage, and Functions enabled
 
 ### Install
@@ -46,7 +45,11 @@ npm install
 
 ### Environment
 
-Create `lib/firebase.ts` with your Firebase config (already gitignored if you store secrets there).
+Copy `.env.example` to `.env` and fill in your Firebase config values:
+
+```bash
+cp .env.example .env
+```
 
 ### Run
 
@@ -56,14 +59,6 @@ npx expo start
 
 Scan the QR code with Expo Go.
 
-### Seed Firestore
-
-```bash
-npx ts-node scripts/seed.ts
-```
-
-Creates the guest and host invite codes, and sample schedule events.
-
 ---
 
 ## Project Structure
@@ -71,55 +66,38 @@ Creates the guest and host invite codes, and sample schedule events.
 ```
 app/
   (auth)/          invite, login, register, profile-setup, forgot-password
-  (tabs)/          feed, schedule, profile, manage (host only)
+  (onboarding)/    host onboarding flow (4 steps: account → names → date/venue → codes)
+  (tabs)/          feed, schedule, guests, profile, manage (host only)
   compose.tsx      host post composer
+  privacy.tsx      privacy policy
 components/        shared UI (PostCard, CommentSheet, ScheduleEventCard, …)
 constants/
-  WEDDING.ts       single source of truth for all wedding details + countdown helpers
   theme.ts         colors, fonts, radii, shadows
-functions/src/     Cloud Functions — notifications, email, like/comment counters
+functions/src/     Cloud Functions — notifications, like/comment counters
 lib/               Firebase init, Firestore helpers, notifications
-store/             Zustand auth store
-scripts/
-  seed.ts          Firestore seed data
-  generate-icon.mjs  regenerate app icons from SVG source
+store/             Zustand stores (auth, wedding, onboarding)
 ```
 
 ---
 
-## Regenerating the App Icon
+## Deploying
+
+### Firestore + Storage Rules
 
 ```bash
-node scripts/generate-icon.mjs
+firebase deploy --only firestore:rules,storage
 ```
 
-Outputs `icon.png`, `splash-icon.png`, `adaptive-icon.png`, and `favicon.png` to `assets/`.
-
----
-
-## Deploying Cloud Functions
+### Cloud Functions
 
 ```bash
-cd functions
-npm run build
+cd functions && npm run build
 firebase deploy --only functions
 ```
 
-Set Gmail secrets before deploying:
+### App (EAS Build)
 
 ```bash
-firebase functions:secrets:set GMAIL_USER
-firebase functions:secrets:set GMAIL_APP_PASS
+eas build --platform ios
+eas submit --platform ios
 ```
-
----
-
-## Firestore Rules
-
-Rules live in `firestore.rules`. Deploy with:
-
-```bash
-firebase deploy --only firestore:rules
-```
-
-Guests can read posts and write to their own likes/comments subcollections. Only hosts can create or update posts and schedule events.

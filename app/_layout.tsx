@@ -59,8 +59,16 @@ export default function RootLayout() {
 
         if (wId) {
           const memberDoc = await getMember(wId, user.uid);
-          setUserDoc(memberDoc);
-          registerForPushNotifications(user.uid, wId).catch(console.error);
+          if (memberDoc) {
+            setUserDoc(memberDoc);
+            registerForPushNotifications(user.uid, wId).catch(console.error);
+          } else {
+            // Wedding was deleted or user removed — clear stale weddingId so
+            // they get routed back to landing to re-onboard or join a new party.
+            await clearCredentials();
+            setWeddingId(null);
+            setUserDoc(null);
+          }
         } else {
           setUserDoc(null);
         }

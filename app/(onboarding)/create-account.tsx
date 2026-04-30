@@ -42,7 +42,13 @@ export default function CreateAccountScreen() {
         await createUserWithEmailAndPassword(auth, email.trim(), password);
       } catch (e: any) {
         if (e.code === 'auth/email-already-in-use') {
-          await signInWithEmailAndPassword(auth, email.trim(), password);
+          try {
+            await signInWithEmailAndPassword(auth, email.trim(), password);
+          } catch {
+            throw new Error(
+              'An account with this email already exists. Please sign in instead, or use "Forgot password" to reset your password.'
+            );
+          }
         } else {
           throw e;
         }
@@ -69,10 +75,9 @@ export default function CreateAccountScreen() {
           <View style={styles.dot} />
           <View style={styles.dot} />
           <View style={styles.dot} />
-          <View style={styles.dot} />
         </View>
 
-        <Text style={styles.eyebrow}>Step 1 of 5</Text>
+        <Text style={styles.eyebrow}>Step 1 of 4</Text>
         <Text style={styles.title}>Create your account</Text>
         <Text style={styles.sub}>
           You'll be the host. We'll set up your wedding details next.
@@ -83,7 +88,7 @@ export default function CreateAccountScreen() {
           style={styles.input}
           value={ownerName}
           onChangeText={setOwnerName}
-          placeholder="e.g. Yash Mehta"
+          placeholder="e.g. Alex Chen"
           placeholderTextColor={theme.colors.ink4}
           autoCapitalize="words"
         />

@@ -113,9 +113,7 @@ export default function FeedScreen() {
   }
 
   const coupleName = config?.coupleName ?? 'Our Day';
-  const countdownSub = config
-    ? `${config.dateStamp} · ${config.venueShort}`
-    : 'Sat · Dec 5, 2026 · Hard Rock Punta Cana';
+  const countdownSub = config ? `${config.dateStamp} · ${config.venueShort}` : '';
 
   return (
     <ScreenWrapper>
@@ -127,9 +125,13 @@ export default function FeedScreen() {
           <>
             <View style={styles.headerRow}>
               <View style={styles.headerLeft}>
-                <View style={styles.headerLogoCircle}>
-                  <Image source={require('../../assets/logo.png')} style={styles.headerLogo} resizeMode="cover" />
-                </View>
+                {config?.coverPhotoURL ? (
+                  <Image source={{ uri: config.coverPhotoURL }} style={[styles.headerLogoCircle, styles.headerLogo]} resizeMode="cover" />
+                ) : (
+                  <View style={[styles.headerLogoCircle, styles.headerMonogram]}>
+                    <Text style={styles.headerMonogramText}>{config?.monogramInitials ?? '♡'}</Text>
+                  </View>
+                )}
                 <View style={{ marginLeft: 10 }}>
                   <Text style={styles.headerTitle}>Our Day</Text>
                   <Text style={styles.headerSub}>
@@ -225,6 +227,18 @@ const styles = StyleSheet.create({
   headerLeft: { flexDirection: 'row', alignItems: 'center' },
   headerLogoCircle: { width: 36, height: 36, borderRadius: 18, overflow: 'hidden' },
   headerLogo: { width: 36, height: 36 },
+  headerMonogram: {
+    backgroundColor: theme.colors.accentTint,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  headerMonogramText: {
+    fontSize: 13,
+    fontFamily: theme.fonts.serif,
+    fontWeight: '600',
+    color: theme.colors.accentDeep,
+    letterSpacing: 1,
+  },
   headerTitle: {
     fontSize: 22,
     fontFamily: theme.fonts.serif,

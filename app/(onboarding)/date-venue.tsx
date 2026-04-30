@@ -59,7 +59,7 @@ export default function DateVenueScreen() {
     }
     const d = parseInt(day, 10);
     const y = parseInt(year, 10);
-    if (isNaN(d) || isNaN(y) || d < 1 || d > 31 || y < 2024) {
+    if (isNaN(d) || isNaN(y) || d < 1 || d > 31 || y < 2020 || y > 2099) {
       Alert.alert('Invalid date', 'Please enter a valid day and year.');
       return;
     }
@@ -87,7 +87,7 @@ export default function DateVenueScreen() {
       location: location.trim(),
       registryUrl: registryUrl.trim(),
     });
-    router.push('/(onboarding)/theme');
+    router.push('/(onboarding)/invite-codes');
   }
 
   return (
@@ -103,10 +103,9 @@ export default function DateVenueScreen() {
           <View style={[styles.dot, styles.dotDone]} />
           <View style={[styles.dot, styles.dotActive]} />
           <View style={styles.dot} />
-          <View style={styles.dot} />
         </View>
 
-        <Text style={styles.eyebrow}>Step 3 of 5</Text>
+        <Text style={styles.eyebrow}>Step 3 of 4</Text>
         <Text style={styles.title}>When and where</Text>
         <Text style={styles.sub}>Your wedding date and venue details.</Text>
 
@@ -169,7 +168,7 @@ export default function DateVenueScreen() {
           style={styles.input}
           value={venue}
           onChangeText={setVenue}
-          placeholder="e.g. Hard Rock Hotel & Casino Punta Cana"
+          placeholder="e.g. The Grand Ballroom at Rosewood"
           placeholderTextColor={theme.colors.ink4}
         />
 
@@ -178,7 +177,7 @@ export default function DateVenueScreen() {
           style={styles.input}
           value={venueShort}
           onChangeText={setVenueShort}
-          placeholder="e.g. Hard Rock Punta Cana"
+          placeholder="e.g. Rosewood Hotel"
           placeholderTextColor={theme.colors.ink4}
         />
 
@@ -187,7 +186,7 @@ export default function DateVenueScreen() {
           style={styles.input}
           value={location}
           onChangeText={setLocation}
-          placeholder="e.g. Punta Cana, Dominican Republic"
+          placeholder="e.g. Santorini, Greece"
           placeholderTextColor={theme.colors.ink4}
         />
 

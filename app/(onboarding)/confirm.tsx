@@ -131,7 +131,7 @@ export default function ConfirmScreen() {
   return (
     <ScrollView style={styles.scroll} contentContainerStyle={styles.container}>
       <View style={styles.progress}>
-        {[...Array(5)].map((_, i) => (
+        {[...Array(4)].map((_, i) => (
           <View key={i} style={[styles.dot, styles.dotDone]} />
         ))}
       </View>
@@ -158,15 +158,6 @@ export default function ConfirmScreen() {
         <Text style={styles.cardSection}>INVITE CODES</Text>
         <Row label="Guest code" value={draft.guestInviteCode || '—'} />
         <Row label="Host code" value={draft.hostInviteCode || '—'} />
-      </View>
-
-      <View style={styles.card}>
-        <Text style={styles.cardSection}>THEME</Text>
-        <View style={styles.swatches}>
-          {[draft.accentTintHex, draft.accentSoftHex, draft.accentHex, draft.accentDeepHex].map((c, i) => (
-            <View key={i} style={[styles.swatch, { backgroundColor: c }]} />
-          ))}
-        </View>
       </View>
 
       <TouchableOpacity
@@ -219,8 +210,6 @@ const styles = StyleSheet.create({
     fontSize: 13, color: theme.colors.ink, fontFamily: theme.fonts.sans,
     fontWeight: '500', flex: 1, textAlign: 'right', marginLeft: 12,
   },
-  swatches: { flexDirection: 'row', gap: 10 },
-  swatch: { flex: 1, height: 32, borderRadius: 6 },
   btn: {
     backgroundColor: theme.colors.accent, borderRadius: theme.radii.pill,
     padding: 16, alignItems: 'center', marginTop: 8,

@@ -10,7 +10,11 @@ import {
   TextInput,
   Switch,
   ScrollView,
+  Image,
+  Modal,
+  Platform,
 } from 'react-native';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import {
   collection,
   onSnapshot,
@@ -23,14 +27,18 @@ import {
   orderBy,
   Timestamp,
 } from 'firebase/firestore';
-import { db } from '../../lib/firebase';
+import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
+import * as ImagePicker from 'expo-image-picker';
+import * as ImageManipulator from 'expo-image-manipulator';
+import { db, storage } from '../../lib/firebase';
 import { UserDoc, membersCol, scheduleCol } from '../../lib/firestore';
 import { useAuthStore } from '../../store/authStore';
+import { useWeddingStore } from '../../store/weddingStore';
 import { ScreenWrapper } from '../../components/ScreenWrapper';
 import { GuestRow } from '../../components/GuestRow';
 import { theme } from '../../constants/theme';
 
-type Tab = 'guests' | 'schedule';
+type Tab = 'guests' | 'schedule' | 'settings';
 type EventColor = 'sky' | 'leaf' | 'accent' | 'sand';
 
 const COLOR_OPTIONS: { value: EventColor; label: string; bg: string }[] = [
@@ -40,14 +48,18 @@ const COLOR_OPTIONS: { value: EventColor; label: string; bg: string }[] = [
   { value: 'sand',   label: 'Sand',  bg: '#F4ECDC' },
 ];
 
-const DATE_OPTIONS = [
-  { value: '02', label: 'Wed\nDec 2' },
-  { value: '03', label: 'Thu\nDec 3' },
-  { value: '04', label: 'Fri\nDec 4' },
-  { value: '05', label: 'Sat\nDec 5' },
-  { value: '06', label: 'Sun\nDec 6' },
-  { value: '07', label: 'Mon\nDec 7' },
-];
+function isoFromDate(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
+function formatDayLabel(iso: string): string {
+  if (!iso) return 'Select date';
+  const d = new Date(iso + 'T12:00:00');
+  return d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
+}
 
 interface GuestItem extends UserDoc { uid: string }
 interface ScheduleItem {
@@ -63,33 +75,35 @@ interface ScheduleItem {
   primary?: boolean;
 }
 
-function parseTimeToTimestamp(timeStr: string, dateDay: string): Timestamp | null {
+function parseTimeToTimestamp(timeStr: string, dateISO: string): Timestamp | null {
   const clean = timeStr.trim().toLowerCase();
   const match = clean.match(/^(\d{1,2}):(\d{2})\s*(am|pm)?$/);
-  if (!match) return null;
+  if (!match || !dateISO) return null;
   let hours = parseInt(match[1], 10);
   const minutes = parseInt(match[2], 10);
   const period = match[3];
   if (period === 'pm' && hours < 12) hours += 12;
   if (period === 'am' && hours === 12) hours = 0;
-  const d = new Date(`2026-12-${dateDay.padStart(2, '0')}T${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:00`);
+  const d = new Date(`${dateISO}T${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:00`);
   return isNaN(d.getTime()) ? null : Timestamp.fromDate(d);
 }
 
 function formatTimestamp(ts: any): { time: string; day: string } {
-  if (!ts?.toDate) return { time: '', day: '05' };
+  if (!ts?.toDate) return { time: '', day: '' };
   const d: Date = ts.toDate();
   const hours = d.getHours();
   const minutes = d.getMinutes();
   const period = hours >= 12 ? 'PM' : 'AM';
   const h = hours % 12 || 12;
   const time = `${h}:${String(minutes).padStart(2, '0')} ${period}`;
-  const day = String(d.getDate()).padStart(2, '0');
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = `${y}-${m}-${String(d.getDate()).padStart(2, '0')}`;
   return { time, day };
 }
 
 const BLANK_EVENT = {
-  title: '', location: '', description: '', time: '', day: '05',
+  title: '', location: '', description: '', time: '', day: '',
   icon: '', color: 'accent' as EventColor, dress: '', primary: false,
 };
 
@@ -100,6 +114,8 @@ export default function ManageScreen() {
   const [loadingGuests, setLoadingGuests] = useState(true);
   const [loadingSchedule, setLoadingSchedule] = useState(true);
   const { weddingId, firebaseUser } = useAuthStore();
+  const { config } = useWeddingStore();
+
 
   // Add form
   const [newFields, setNewFields] = useState(BLANK_EVENT);
@@ -238,10 +254,10 @@ export default function ManageScreen() {
 
       <View style={styles.segmentWrap}>
         <View style={styles.segment}>
-          {(['guests', 'schedule'] as Tab[]).map((t) => (
+          {(['guests', 'schedule', 'settings'] as Tab[]).map((t) => (
             <TouchableOpacity key={t} style={[styles.segBtn, tab === t && styles.segBtnActive]} onPress={() => setTab(t)} activeOpacity={0.8}>
               <Text style={[styles.segBtnText, tab === t && styles.segBtnTextActive]}>
-                {t === 'guests' ? 'Guests' : 'Schedule'}
+                {t === 'guests' ? 'Guests' : t === 'schedule' ? 'Schedule' : 'Settings'}
               </Text>
             </TouchableOpacity>
           ))}
@@ -261,6 +277,10 @@ export default function ManageScreen() {
             ListEmptyComponent={<Text style={styles.empty}>No guests yet</Text>}
           />
         )
+      )}
+
+      {tab === 'settings' && (
+        <LogoSettings weddingId={weddingId} config={config} />
       )}
 
       {tab === 'schedule' && (
@@ -325,6 +345,150 @@ export default function ManageScreen() {
   );
 }
 
+// ── Logo / monogram settings ──────────────────────────────────────────────────
+
+function LogoSettings({ weddingId, config }: { weddingId: string | null; config: any }) {
+  const [uploading, setUploading] = useState(false);
+  const [removing, setRemoving] = useState(false);
+  const coverPhotoURL: string | null = config?.coverPhotoURL ?? null;
+  const monogramInitials: string = config?.monogramInitials ?? '??';
+
+  async function handleUpload() {
+    const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!perm.granted) {
+      Alert.alert('Permission needed', 'Please allow photo library access in Settings.');
+      return;
+    }
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.9,
+    });
+    if (result.canceled || !result.assets[0] || !weddingId) return;
+
+    setUploading(true);
+    try {
+      const manipulated = await ImageManipulator.manipulateAsync(
+        result.assets[0].uri,
+        [{ resize: { width: 400, height: 400 } }],
+        { compress: 0.85, format: ImageManipulator.SaveFormat.JPEG }
+      );
+      const response = await fetch(manipulated.uri);
+      const blob = await response.blob();
+      const storageRef = ref(storage, `weddings/${weddingId}/coverPhoto.jpg`);
+      await uploadBytes(storageRef, blob, { contentType: 'image/jpeg' });
+      const downloadURL = await getDownloadURL(storageRef);
+      await updateDoc(doc(db, 'weddings', weddingId), { coverPhotoURL: downloadURL });
+    } catch (e: any) {
+      Alert.alert('Upload failed', e.message ?? 'Could not upload photo.');
+    } finally {
+      setUploading(false);
+    }
+  }
+
+  async function handleRemove() {
+    if (!weddingId) return;
+    Alert.alert('Remove logo', 'This will revert to your initials monogram.', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Remove',
+        style: 'destructive',
+        onPress: async () => {
+          setRemoving(true);
+          try {
+            await updateDoc(doc(db, 'weddings', weddingId), { coverPhotoURL: null });
+            try {
+              await deleteObject(ref(storage, `weddings/${weddingId}/coverPhoto.jpg`));
+            } catch {}
+          } catch (e: any) {
+            Alert.alert('Error', e.message);
+          } finally {
+            setRemoving(false);
+          }
+        },
+      },
+    ]);
+  }
+
+  return (
+    <ScrollView contentContainerStyle={lStyles.container} showsVerticalScrollIndicator={false}>
+      <Text style={lStyles.sectionHead}>WEDDING LOGO</Text>
+      <Text style={lStyles.hint}>
+        Shown in the feed header for all guests. Upload your own photo or we'll use your initials.
+      </Text>
+
+      <View style={lStyles.previewWrap}>
+        {coverPhotoURL ? (
+          <Image source={{ uri: coverPhotoURL }} style={lStyles.previewPhoto} />
+        ) : (
+          <View style={lStyles.previewMonogram}>
+            <Text style={lStyles.monogramText}>{monogramInitials}</Text>
+          </View>
+        )}
+        <Text style={lStyles.previewLabel}>
+          {coverPhotoURL ? 'Current logo' : 'Default monogram'}
+        </Text>
+      </View>
+
+      <TouchableOpacity
+        style={[lStyles.uploadBtn, uploading && lStyles.btnDisabled]}
+        onPress={handleUpload}
+        disabled={uploading}
+        activeOpacity={0.85}>
+        {uploading
+          ? <ActivityIndicator color={theme.colors.bg} size="small" />
+          : <Text style={lStyles.uploadBtnText}>{coverPhotoURL ? 'Change photo' : 'Upload photo'}</Text>}
+      </TouchableOpacity>
+
+      {coverPhotoURL && (
+        <TouchableOpacity
+          style={[lStyles.removeBtn, removing && lStyles.btnDisabled]}
+          onPress={handleRemove}
+          disabled={removing}
+          activeOpacity={0.85}>
+          {removing
+            ? <ActivityIndicator color={theme.colors.accent} size="small" />
+            : <Text style={lStyles.removeBtnText}>Remove photo</Text>}
+        </TouchableOpacity>
+      )}
+    </ScrollView>
+  );
+}
+
+const lStyles = StyleSheet.create({
+  container: { padding: 24, paddingBottom: 100 },
+  sectionHead: {
+    fontSize: 10, fontWeight: '700', letterSpacing: 2, textTransform: 'uppercase',
+    color: theme.colors.accentDeep, fontFamily: theme.fonts.sans, marginBottom: 6,
+  },
+  hint: { fontSize: 13, color: theme.colors.ink3, fontFamily: theme.fonts.sans, lineHeight: 18, marginBottom: 28 },
+  previewWrap: { alignItems: 'center', marginBottom: 28 },
+  previewPhoto: { width: 100, height: 100, borderRadius: 50, marginBottom: 10 },
+  previewMonogram: {
+    width: 100, height: 100, borderRadius: 50,
+    backgroundColor: theme.colors.surface2,
+    borderWidth: 1, borderColor: theme.colors.line,
+    justifyContent: 'center', alignItems: 'center', marginBottom: 10,
+  },
+  monogramText: {
+    fontSize: 32, fontFamily: theme.fonts.serif, fontWeight: '600',
+    color: theme.colors.accentDeep, letterSpacing: 2,
+  },
+  previewLabel: { fontSize: 12, color: theme.colors.ink3, fontFamily: theme.fonts.sans },
+  uploadBtn: {
+    backgroundColor: theme.colors.accent, borderRadius: theme.radii.pill,
+    paddingVertical: 14, alignItems: 'center', marginBottom: 12,
+  },
+  removeBtn: {
+    borderWidth: 1, borderColor: theme.colors.accent, borderRadius: theme.radii.pill,
+    paddingVertical: 14, alignItems: 'center',
+  },
+  btnDisabled: { opacity: 0.5 },
+  uploadBtnText: { color: theme.colors.bg, fontSize: 15, fontWeight: '600', fontFamily: theme.fonts.sans },
+  removeBtnText: { color: theme.colors.accent, fontSize: 15, fontWeight: '600', fontFamily: theme.fonts.sans },
+});
+
 // ── Shared event form ─────────────────────────────────────────────────────────
 
 interface EventFields {
@@ -342,8 +506,46 @@ interface FormProps {
   mode: 'add' | 'edit';
 }
 
+function timeStringToDate(timeStr: string): Date {
+  const d = new Date();
+  const clean = timeStr.trim().toLowerCase();
+  const match = clean.match(/^(\d{1,2}):(\d{2})\s*(am|pm)?$/);
+  if (match) {
+    let hours = parseInt(match[1], 10);
+    const minutes = parseInt(match[2], 10);
+    if (match[3] === 'pm' && hours < 12) hours += 12;
+    if (match[3] === 'am' && hours === 12) hours = 0;
+    d.setHours(hours, minutes, 0, 0);
+  } else {
+    d.setHours(9, 0, 0, 0);
+  }
+  return d;
+}
+
+function dateToTimeString(date: Date): string {
+  const hours = date.getHours();
+  const minutes = date.getMinutes();
+  const period = hours >= 12 ? 'PM' : 'AM';
+  const h = hours % 12 || 12;
+  return `${h}:${String(minutes).padStart(2, '0')} ${period}`;
+}
+
 function EventForm({ fields, onChange, onSubmit, onCancel, submitting, mode }: FormProps) {
   const set = (key: keyof EventFields) => (val: any) => onChange({ ...fields, [key]: val });
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [showTimePicker, setShowTimePicker] = useState(false);
+  const pickerDate = fields.day ? new Date(fields.day + 'T12:00:00') : new Date();
+  const pickerTime = timeStringToDate(fields.time);
+
+  function onDateChange(_: any, date?: Date) {
+    if (Platform.OS === 'android') setShowDatePicker(false);
+    if (date) set('day')(isoFromDate(date));
+  }
+
+  function onTimeChange(_: any, date?: Date) {
+    if (Platform.OS === 'android') setShowTimePicker(false);
+    if (date) set('time')(dateToTimeString(date));
+  }
 
   return (
     <View style={mode === 'add' ? fStyles.addWrap : fStyles.editWrap}>
@@ -358,24 +560,79 @@ function EventForm({ fields, onChange, onSubmit, onCancel, submitting, mode }: F
       <View style={fStyles.row}>
         <View style={{ flex: 1 }}>
           <Text style={fStyles.fieldLabel}>TIME</Text>
-          <TextInput style={fStyles.input} value={fields.time} onChangeText={set('time')} placeholder="e.g. 7:00 PM" placeholderTextColor={theme.colors.ink4} />
+          <TouchableOpacity
+            style={[fStyles.input, fStyles.dateBtn]}
+            onPress={() => setShowTimePicker(true)}
+            activeOpacity={0.7}>
+            <Text style={[fStyles.dateBtnText, !fields.time && { color: theme.colors.ink4 }]}>
+              {fields.time || 'Select time'}
+            </Text>
+          </TouchableOpacity>
         </View>
         <View style={{ width: 12 }} />
         <View style={{ flex: 1 }}>
           <Text style={fStyles.fieldLabel}>DATE</Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={fStyles.datePicker}>
-            {DATE_OPTIONS.map((d) => (
-              <TouchableOpacity
-                key={d.value}
-                style={[fStyles.dateBubble, fields.day === d.value && fStyles.dateBubbleActive]}
-                onPress={() => set('day')(d.value)}
-                activeOpacity={0.7}>
-                <Text style={[fStyles.dateBubbleText, fields.day === d.value && fStyles.dateBubbleTextActive]}>{d.label}</Text>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
+          <TouchableOpacity
+            style={[fStyles.input, fStyles.dateBtn]}
+            onPress={() => setShowDatePicker(true)}
+            activeOpacity={0.7}>
+            <Text style={[fStyles.dateBtnText, !fields.day && { color: theme.colors.ink4 }]}>
+              {formatDayLabel(fields.day)}
+            </Text>
+          </TouchableOpacity>
         </View>
       </View>
+
+      {Platform.OS === 'android' && showDatePicker && (
+        <DateTimePicker value={pickerDate} mode="date" display="default" onChange={onDateChange} />
+      )}
+      {Platform.OS === 'android' && showTimePicker && (
+        <DateTimePicker value={pickerTime} mode="time" display="default" onChange={onTimeChange} />
+      )}
+
+      {Platform.OS === 'ios' && (
+        <Modal visible={showDatePicker} transparent animationType="slide">
+          <View style={fStyles.pickerOverlay}>
+            <View style={fStyles.pickerSheet}>
+              <View style={fStyles.pickerHeader}>
+                <TouchableOpacity onPress={() => setShowDatePicker(false)}>
+                  <Text style={fStyles.pickerDone}>Done</Text>
+                </TouchableOpacity>
+              </View>
+              <DateTimePicker
+                value={pickerDate}
+                mode="date"
+                display="spinner"
+                onChange={onDateChange}
+                textColor={theme.colors.ink}
+                style={{ height: 180 }}
+              />
+            </View>
+          </View>
+        </Modal>
+      )}
+
+      {Platform.OS === 'ios' && (
+        <Modal visible={showTimePicker} transparent animationType="slide">
+          <View style={fStyles.pickerOverlay}>
+            <View style={fStyles.pickerSheet}>
+              <View style={fStyles.pickerHeader}>
+                <TouchableOpacity onPress={() => setShowTimePicker(false)}>
+                  <Text style={fStyles.pickerDone}>Done</Text>
+                </TouchableOpacity>
+              </View>
+              <DateTimePicker
+                value={pickerTime}
+                mode="time"
+                display="spinner"
+                onChange={onTimeChange}
+                textColor={theme.colors.ink}
+                style={{ height: 180 }}
+              />
+            </View>
+          </View>
+        </Modal>
+      )}
 
       <View style={fStyles.row}>
         <View style={{ flex: 1 }}>
@@ -447,14 +704,24 @@ const fStyles = StyleSheet.create({
   },
   multiline: { minHeight: 60, textAlignVertical: 'top' },
   row: { flexDirection: 'row', alignItems: 'flex-end' },
-  datePicker: { paddingVertical: 2 },
-  dateBubble: {
-    width: 52, paddingVertical: 6, borderRadius: theme.radii.sm, marginRight: 6,
-    backgroundColor: theme.colors.surface2, alignItems: 'center',
+  dateBtn: { justifyContent: 'center' },
+  dateBtnText: { fontSize: 14, color: theme.colors.ink, fontFamily: theme.fonts.sans },
+  pickerOverlay: {
+    flex: 1, justifyContent: 'flex-end',
+    backgroundColor: 'rgba(0,0,0,0.35)',
   },
-  dateBubbleActive: { backgroundColor: theme.colors.accent },
-  dateBubbleText: { fontSize: 10, fontWeight: '600', color: theme.colors.ink3, fontFamily: theme.fonts.sans, textAlign: 'center' },
-  dateBubbleTextActive: { color: theme.colors.bg },
+  pickerSheet: {
+    backgroundColor: theme.colors.card,
+    borderTopLeftRadius: theme.radii.lg,
+    borderTopRightRadius: theme.radii.lg,
+    paddingBottom: 24,
+  },
+  pickerHeader: {
+    flexDirection: 'row', justifyContent: 'flex-end',
+    paddingHorizontal: 20, paddingVertical: 12,
+    borderBottomWidth: 0.5, borderColor: theme.colors.line,
+  },
+  pickerDone: { fontSize: 16, fontWeight: '600', color: theme.colors.accent, fontFamily: theme.fonts.sans },
   colorRow: { flexDirection: 'row', gap: 8, marginBottom: 4 },
   colorChip: {
     flex: 1, paddingVertical: 7, borderRadius: theme.radii.sm,

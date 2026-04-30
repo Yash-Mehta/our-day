@@ -56,11 +56,10 @@ export default function InviteCodesScreen() {
         <View style={[styles.dot, styles.dotDone]} />
         <View style={[styles.dot, styles.dotDone]} />
         <View style={[styles.dot, styles.dotDone]} />
-        <View style={[styles.dot, styles.dotDone]} />
         <View style={[styles.dot, styles.dotActive]} />
       </View>
 
-      <Text style={styles.eyebrow}>Step 5 of 5</Text>
+      <Text style={styles.eyebrow}>Step 4 of 4</Text>
       <Text style={styles.title}>Invite codes</Text>
       <Text style={styles.sub}>
         Share the guest code with your attendees. Use the host code to add other hosts.

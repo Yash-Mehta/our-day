@@ -19,6 +19,7 @@ export function useWeddingConfig(weddingId: string | null) {
       } else {
         setConfig(null);
       }
+      setLoading(false);
     });
     return unsub;
   }, [weddingId]);

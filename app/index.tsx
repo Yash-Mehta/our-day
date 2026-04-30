@@ -1,4 +1,4 @@
-import { View, Text, TouchableOpacity, StyleSheet, Image } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { theme } from '../constants/theme';
@@ -14,9 +14,6 @@ export default function IndexScreen() {
       />
 
       <View style={styles.logoWrap}>
-        <View style={styles.logoCircle}>
-          <Image source={require('../assets/logo.png')} style={styles.logo} resizeMode="cover" />
-        </View>
         <Text style={styles.appName}>Our Day</Text>
         <Text style={styles.tagline}>Your wedding, beautifully shared</Text>
       </View>
@@ -50,8 +47,6 @@ export default function IndexScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, justifyContent: 'space-between', paddingVertical: 80, paddingHorizontal: 32 },
   logoWrap: { alignItems: 'center', flex: 1, justifyContent: 'center' },
-  logoCircle: { width: 120, height: 120, borderRadius: 60, overflow: 'hidden', marginBottom: 20 },
-  logo: { width: 120, height: 120 },
   appName: {
     fontSize: 40,
     fontFamily: theme.fonts.serif,

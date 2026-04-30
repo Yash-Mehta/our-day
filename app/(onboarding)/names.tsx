@@ -47,10 +47,9 @@ export default function NamesScreen() {
           <View style={[styles.dot, styles.dotActive]} />
           <View style={styles.dot} />
           <View style={styles.dot} />
-          <View style={styles.dot} />
         </View>
 
-        <Text style={styles.eyebrow}>Step 2 of 5</Text>
+        <Text style={styles.eyebrow}>Step 2 of 4</Text>
         <Text style={styles.title}>The happy couple</Text>
         <Text style={styles.sub}>Enter the first names of the two people getting married.</Text>
 
@@ -59,7 +58,7 @@ export default function NamesScreen() {
           style={styles.input}
           value={person1}
           onChangeText={setPerson1}
-          placeholder="e.g. Yash"
+          placeholder="e.g. Alex"
           placeholderTextColor={theme.colors.ink4}
           autoCapitalize="words"
           autoFocus
@@ -72,7 +71,7 @@ export default function NamesScreen() {
           style={styles.input}
           value={person2}
           onChangeText={setPerson2}
-          placeholder="e.g. Vaani"
+          placeholder="e.g. Jordan"
           placeholderTextColor={theme.colors.ink4}
           autoCapitalize="words"
         />

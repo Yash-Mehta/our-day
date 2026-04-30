@@ -4,10 +4,7 @@
     "slug": "our-day",
     "version": "1.0.0",
     "scheme": "ourday",
-    "platforms": [
-      "ios",
-      "android"
-    ],
+    "platforms": ["ios", "android"],
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
@@ -18,30 +15,53 @@
     },
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "com.ourday.app"
+      "bundleIdentifier": "com.ourday.app",
+      "buildNumber": "1",
+      "infoPlist": {
+        "NSCameraUsageDescription": "Our Day uses your camera so you can share photos with your wedding party.",
+        "NSPhotoLibraryUsageDescription": "Our Day accesses your photos so you can share them with your wedding party.",
+        "NSPhotoLibraryAddUsageDescription": "Our Day saves photos to your library.",
+        "NSMicrophoneUsageDescription": "Our Day may access your microphone when recording videos.",
+        "UIBackgroundModes": ["remote-notification"],
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
       "package": "com.ourday.app",
+      "versionCode": 1,
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#FAF6F1"
       },
       "permissions": [
-        "android.permission.RECORD_AUDIO"
+        "android.permission.CAMERA",
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.RECORD_AUDIO",
+        "android.permission.RECEIVE_BOOT_COMPLETED",
+        "android.permission.VIBRATE"
       ]
     },
     "plugins": [
       "expo-router",
       "expo-font",
-      "expo-notifications",
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/icon.png",
+          "color": "#7A4A3F",
+          "sounds": []
+        }
+      ],
       [
         "expo-image-picker",
         {
-          "photosPermission": "Allow Our Day to access your photos."
+          "photosPermission": "Our Day accesses your photos so you can share them with your wedding party.",
+          "cameraPermission": "Our Day uses your camera so you can share photos with your wedding party."
         }
       ],
       "expo-web-browser",
-      "expo-secure-store"
+      "expo-secure-store",
+      "@react-native-community/datetimepicker"
     ],
     "experiments": {
       "typedRoutes": true

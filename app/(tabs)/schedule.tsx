@@ -64,9 +64,7 @@ export default function ScheduleScreen() {
     );
   }
 
-  const headingSub = config
-    ? `${config.venueShort} · ${config.location}`
-    : 'Hard Rock · Punta Cana · Dec 2–5';
+  const headingSub = config ? `${config.venueShort} · ${config.location}` : '';
 
   return (
     <ScreenWrapper>
@@ -80,12 +78,9 @@ export default function ScheduleScreen() {
               {role === 'host' ? '✦ Hosting · Weekend' : 'Wedding weekend'}
             </Text>
             <Text style={styles.heading}>
-              Four days{' '}
-              <Text style={[styles.heading, { fontStyle: 'italic', color: theme.colors.accent }]}>
-                in paradise
-              </Text>
+              {config?.coupleName ?? 'Our Day'}
             </Text>
-            <Text style={styles.sub}>{headingSub}</Text>
+            {!!headingSub && <Text style={styles.sub}>{headingSub}</Text>}
           </View>
         }
         renderItem={({ item }) => {

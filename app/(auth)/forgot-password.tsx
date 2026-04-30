@@ -9,12 +9,10 @@ import {
   Platform,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { httpsCallable } from 'firebase/functions';
-import { functions } from '../../lib/firebase';
+import { sendPasswordResetEmail } from 'firebase/auth';
+import { auth } from '../../lib/firebase';
 import { theme } from '../../constants/theme';
 import { SprigDivider } from '../../components/SprigDivider';
-
-const sendResetEmail = httpsCallable(functions, 'sendResetEmail');
 
 export default function ForgotPasswordScreen() {
   const [email, setEmail] = useState('');
@@ -28,10 +26,21 @@ export default function ForgotPasswordScreen() {
     setLoading(true);
     setError('');
     try {
-      await sendResetEmail({ email: email.trim().toLowerCase() });
+      await sendPasswordResetEmail(auth, email.trim().toLowerCase());
       setSent(true);
-    } catch {
-      setError('Something went wrong. Please try again.');
+    } catch (e: any) {
+      const code: string = e?.code ?? '';
+      if (code === 'auth/user-not-found' || code === 'auth/invalid-credential') {
+        setError('No account found with that email address.');
+      } else if (code === 'auth/invalid-email') {
+        setError('Please enter a valid email address.');
+      } else if (code === 'auth/too-many-requests') {
+        setError('Too many attempts. Please wait a moment and try again.');
+      } else if (code === 'auth/network-request-failed') {
+        setError('No internet connection. Please check your network.');
+      } else {
+        setError(e?.message ?? 'Something went wrong. Please try again.');
+      }
     } finally {
       setLoading(false);
     }
@@ -53,7 +62,8 @@ export default function ForgotPasswordScreen() {
           </View>
 
           <Text style={styles.hint}>
-            Click the link in the email to choose a new password, then come back and sign in.
+            Click the link in the email to choose a new password, then come back and sign in.{'\n\n'}
+            Can't find it? Check your <Text style={{ fontWeight: '700' }}>spam or junk folder</Text> — Firebase emails sometimes land there.
           </Text>
 
           <TouchableOpacity style={styles.button} onPress={() => router.replace('/(auth)/login')} activeOpacity={0.85}>
