@@ -78,10 +78,14 @@ export default function FeedScreen() {
       if (!firebaseUser || !weddingId) return;
       const uid = firebaseUser.uid;
       const likeRef = doc(db, 'weddings', weddingId, 'posts', post.id, 'likes', uid);
-      if (likedIds.has(post.id)) {
-        await deleteDoc(likeRef);
-      } else {
-        await setDoc(likeRef, { likedAt: new Date() });
+      try {
+        if (likedIds.has(post.id)) {
+          await deleteDoc(likeRef);
+        } else {
+          await setDoc(likeRef, { likedAt: new Date() });
+        }
+      } catch {
+        // snapshot listener will reconcile the correct state
       }
     },
     [firebaseUser, likedIds, weddingId]
@@ -94,14 +98,19 @@ export default function FeedScreen() {
       {
         text: 'Delete',
         style: 'destructive',
-        onPress: () => deleteDoc(doc(db, 'weddings', weddingId, 'posts', post.id)),
+        onPress: () =>
+          deleteDoc(doc(db, 'weddings', weddingId, 'posts', post.id)).catch(() =>
+            Alert.alert('Error', 'Could not delete post.')
+          ),
       },
     ]);
   }
 
   async function handleTogglePin(post: Post) {
     if (!weddingId) return;
-    await updateDoc(doc(db, 'weddings', weddingId, 'posts', post.id), { pinned: !post.pinned });
+    await updateDoc(doc(db, 'weddings', weddingId, 'posts', post.id), { pinned: !post.pinned }).catch(() =>
+      Alert.alert('Error', 'Could not update post.')
+    );
   }
 
   if (loading) {

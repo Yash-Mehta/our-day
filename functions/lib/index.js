@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.onLikeDeleted = exports.onLikeCreated = exports.onCommentCreated = exports.onPostCreated = exports.sendResetEmail = void 0;
+exports.onMemberUpdated = exports.onCommentDeleted = exports.onLikeDeleted = exports.onLikeCreated = exports.onCommentCreated = exports.onPostCreated = exports.sendResetEmail = void 0;
 const app_1 = require("firebase-admin/app");
 const firestore_1 = require("firebase-admin/firestore");
 const messaging_1 = require("firebase-admin/messaging");
@@ -156,5 +156,50 @@ exports.onLikeDeleted = (0, firestore_3.onDocumentDeleted)('weddings/{weddingId}
     await db.doc(`weddings/${weddingId}/posts/${postId}`).update({
         likeCount: firestore_2.FieldValue.increment(-1),
     });
+});
+exports.onCommentDeleted = (0, firestore_3.onDocumentDeleted)('weddings/{weddingId}/posts/{postId}/comments/{commentId}', async (event) => {
+    const { weddingId, postId } = event.params;
+    await db.doc(`weddings/${weddingId}/posts/${postId}`).update({
+        commentCount: firestore_2.FieldValue.increment(-1),
+    });
+});
+exports.onMemberUpdated = (0, firestore_3.onDocumentUpdated)('weddings/{weddingId}/members/{uid}', async (event) => {
+    var _a, _b, _c;
+    const before = (_a = event.data) === null || _a === void 0 ? void 0 : _a.before.data();
+    const after = (_b = event.data) === null || _b === void 0 ? void 0 : _b.after.data();
+    if (!before || !after)
+        return;
+    const nameChanged = before.displayName !== after.displayName;
+    const photoChanged = before.photoURL !== after.photoURL;
+    if (!nameChanged && !photoChanged)
+        return;
+    const { weddingId, uid } = event.params;
+    const update = {};
+    if (nameChanged)
+        update.authorName = after.displayName;
+    if (photoChanged)
+        update.authorPhotoURL = (_c = after.photoURL) !== null && _c !== void 0 ? _c : null;
+    // Update all posts by this author in this wedding
+    const postsSnap = await db
+        .collection(`weddings/${weddingId}/posts`)
+        .where('authorId', '==', uid)
+        .get();
+    if (postsSnap.size > 0) {
+        const batch = db.batch();
+        postsSnap.docs.forEach((d) => batch.update(d.ref, update));
+        await batch.commit();
+    }
+    // Update all comments by this author in this wedding
+    const commentsSnap = await db
+        .collectionGroup('comments')
+        .where('authorId', '==', uid)
+        .get();
+    const weddingPrefix = `weddings/${weddingId}/`;
+    const toUpdate = commentsSnap.docs.filter((d) => d.ref.path.startsWith(weddingPrefix));
+    if (toUpdate.length > 0) {
+        const batch = db.batch();
+        toUpdate.forEach((d) => batch.update(d.ref, update));
+        await batch.commit();
+    }
 });
 //# sourceMappingURL=index.js.map

@@ -47,6 +47,7 @@ export default function RegisterScreen() {
       // _layout.tsx will navigate to profile-setup once firebaseUser is set
     } catch (e: any) {
       Alert.alert('Error', e.message);
+    } finally {
       setLoading(false);
     }
   }

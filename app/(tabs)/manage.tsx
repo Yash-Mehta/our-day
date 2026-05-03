@@ -147,15 +147,27 @@ export default function ManageScreen() {
 
   async function handlePromote(uid: string) {
     if (!weddingId) return;
-    await updateDoc(doc(db, 'weddings', weddingId, 'members', uid), { role: 'host' });
+    try {
+      await updateDoc(doc(db, 'weddings', weddingId, 'members', uid), { role: 'host' });
+    } catch {
+      Alert.alert('Error', 'Could not promote guest.');
+    }
   }
   async function handleDemote(uid: string) {
     if (!weddingId) return;
-    await updateDoc(doc(db, 'weddings', weddingId, 'members', uid), { role: 'guest' });
+    try {
+      await updateDoc(doc(db, 'weddings', weddingId, 'members', uid), { role: 'guest' });
+    } catch {
+      Alert.alert('Error', 'Could not update role.');
+    }
   }
   async function handleRemove(uid: string) {
     if (!weddingId) return;
-    await deleteDoc(doc(db, 'weddings', weddingId, 'members', uid));
+    try {
+      await deleteDoc(doc(db, 'weddings', weddingId, 'members', uid));
+    } catch {
+      Alert.alert('Error', 'Could not remove guest.');
+    }
   }
 
   async function moveEvent(index: number, direction: -1 | 1) {
@@ -169,7 +181,11 @@ export default function ManageScreen() {
     reordered.forEach((item, i) =>
       batch.update(doc(db, 'weddings', weddingId, 'schedule', item.id), { order: i })
     );
-    await batch.commit();
+    try {
+      await batch.commit();
+    } catch {
+      setEvents(events); // revert optimistic update on failure
+    }
   }
 
   async function handleDeleteEvent(id: string) {
@@ -179,7 +195,10 @@ export default function ManageScreen() {
       {
         text: 'Delete',
         style: 'destructive',
-        onPress: () => deleteDoc(doc(db, 'weddings', weddingId, 'schedule', id)),
+        onPress: () =>
+          deleteDoc(doc(db, 'weddings', weddingId, 'schedule', id)).catch(() =>
+            Alert.alert('Error', 'Could not delete event.')
+          ),
       },
     ]);
   }
@@ -187,20 +206,25 @@ export default function ManageScreen() {
   async function handleAddEvent() {
     if (!weddingId || !newFields.title.trim() || !newFields.location.trim()) return;
     setAddingEvent(true);
-    const startTime = parseTimeToTimestamp(newFields.time, newFields.day);
-    await addDoc(scheduleCol(weddingId), {
-      title: newFields.title.trim(),
-      location: newFields.location.trim(),
-      description: newFields.description.trim() || null,
-      order: events.length,
-      startTime,
-      icon: newFields.icon.trim() || '✦',
-      color: newFields.color,
-      dress: newFields.dress.trim() || null,
-      primary: newFields.primary,
-    });
-    setNewFields(BLANK_EVENT);
-    setAddingEvent(false);
+    try {
+      const startTime = parseTimeToTimestamp(newFields.time, newFields.day);
+      await addDoc(scheduleCol(weddingId), {
+        title: newFields.title.trim(),
+        location: newFields.location.trim(),
+        description: newFields.description.trim() || null,
+        order: events.length,
+        startTime,
+        icon: newFields.icon.trim() || '✦',
+        color: newFields.color,
+        dress: newFields.dress.trim() || null,
+        primary: newFields.primary,
+      });
+      setNewFields(BLANK_EVENT);
+    } catch {
+      Alert.alert('Error', 'Could not add event.');
+    } finally {
+      setAddingEvent(false);
+    }
   }
 
   function startEdit(item: ScheduleItem) {
@@ -360,7 +384,7 @@ function LogoSettings({ weddingId, config }: { weddingId: string | null; config:
       return;
     }
     const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      mediaTypes: ['images'],
       allowsEditing: true,
       aspect: [1, 1],
       quality: 0.9,

@@ -102,7 +102,8 @@ export function CommentSheet({ postId, onClose }: Props) {
 
   const bottomPad = keyboardAnim.interpolate({
     inputRange: [0, 1],
-    outputRange: [insets.bottom, 1],
+    outputRange: [insets.bottom, 0],
+    extrapolate: 'clamp',
   });
 
   return (

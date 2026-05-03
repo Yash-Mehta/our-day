@@ -66,6 +66,7 @@ export default function RootLayout() {
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, async (user) => {
+      setLoading(true);
       setFirebaseUser(user);
       if (user) {
         // Resolve weddingId: SecureStore first, then /users index
@@ -81,7 +82,7 @@ export default function RootLayout() {
           const memberDoc = await getMember(wId, user.uid);
           if (memberDoc) {
             setUserDoc(memberDoc);
-            registerForPushNotifications(user.uid, wId).catch(console.error);
+            registerForPushNotifications(user.uid, wId).catch(() => {});
           } else {
             // Wedding was deleted or user removed — clear stale weddingId so
             // they get routed back to landing to re-onboard or join a new party.
@@ -115,7 +116,7 @@ export default function RootLayout() {
     } else if (firebaseUser && inAuth) {
       if (isProfileComplete) {
         playEntryTransition(() => router.replace('/(tabs)/feed'));
-      } else {
+      } else if (segments[1] !== 'profile-setup') {
         router.replace('/(auth)/profile-setup');
       }
     } else if (firebaseUser && !inOnboarding && !isProfileComplete) {

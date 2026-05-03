@@ -3,7 +3,7 @@ import { getFirestore } from 'firebase-admin/firestore';
 import { getMessaging } from 'firebase-admin/messaging';
 import { getAuth } from 'firebase-admin/auth';
 import { FieldValue } from 'firebase-admin/firestore';
-import { onDocumentCreated, onDocumentDeleted } from 'firebase-functions/v2/firestore';
+import { onDocumentCreated, onDocumentDeleted, onDocumentUpdated } from 'firebase-functions/v2/firestore';
 import { onCall, HttpsError } from 'firebase-functions/v2/https';
 import { defineSecret } from 'firebase-functions/params';
 import * as nodemailer from 'nodemailer';
@@ -172,5 +172,59 @@ export const onLikeDeleted = onDocumentDeleted(
     await db.doc(`weddings/${weddingId}/posts/${postId}`).update({
       likeCount: FieldValue.increment(-1),
     });
+  }
+);
+
+export const onCommentDeleted = onDocumentDeleted(
+  'weddings/{weddingId}/posts/{postId}/comments/{commentId}',
+  async (event) => {
+    const { weddingId, postId } = event.params;
+    await db.doc(`weddings/${weddingId}/posts/${postId}`).update({
+      commentCount: FieldValue.increment(-1),
+    });
+  }
+);
+
+export const onMemberUpdated = onDocumentUpdated(
+  'weddings/{weddingId}/members/{uid}',
+  async (event) => {
+    const before = event.data?.before.data();
+    const after = event.data?.after.data();
+    if (!before || !after) return;
+
+    const nameChanged = before.displayName !== after.displayName;
+    const photoChanged = before.photoURL !== after.photoURL;
+    if (!nameChanged && !photoChanged) return;
+
+    const { weddingId, uid } = event.params;
+    const update: Record<string, string | null> = {};
+    if (nameChanged) update.authorName = after.displayName;
+    if (photoChanged) update.authorPhotoURL = after.photoURL ?? null;
+
+    // Update all posts by this author in this wedding
+    const postsSnap = await db
+      .collection(`weddings/${weddingId}/posts`)
+      .where('authorId', '==', uid)
+      .get();
+
+    if (postsSnap.size > 0) {
+      const batch = db.batch();
+      postsSnap.docs.forEach((d) => batch.update(d.ref, update));
+      await batch.commit();
+    }
+
+    // Update all comments by this author in this wedding
+    const commentsSnap = await db
+      .collectionGroup('comments')
+      .where('authorId', '==', uid)
+      .get();
+
+    const weddingPrefix = `weddings/${weddingId}/`;
+    const toUpdate = commentsSnap.docs.filter((d) => d.ref.path.startsWith(weddingPrefix));
+    if (toUpdate.length > 0) {
+      const batch = db.batch();
+      toUpdate.forEach((d) => batch.update(d.ref, update));
+      await batch.commit();
+    }
   }
 );
