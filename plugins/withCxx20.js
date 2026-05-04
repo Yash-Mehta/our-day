@@ -347,15 +347,20 @@ module.exports = function withCxx20(config) {
     dst = File.join(folly_coro_dir, 'Coroutine.h')
     FileUtils.cp(src, dst)
 
-    # Fix ReanimatedMountHook.h: older reanimated used 'double mountTime' but
-    # RN 0.81's UIManagerMountHook uses HighResTimeStamp — patch to match.
-    mount_hook = File.join(installer.sandbox.root, 'Headers/Private/RNReanimated/reanimated/Fabric/ReanimatedMountHook.h')
-    if File.exist?(mount_hook)
-      mh = File.read(mount_hook)
-      if mh.include?('double mountTime')
-        mh = mh.gsub('double mountTime', 'HighResTimeStamp mountTime')
-        File.write(mount_hook, mh)
-        puts "patched ReanimatedMountHook.h: double -> HighResTimeStamp"
+    # Fix ReanimatedMountHook: older reanimated used 'double mountTime' but
+    # RN 0.81's UIManagerMountHook uses HighResTimeStamp — patch both files.
+    [
+      File.join(installer.sandbox.root, 'Headers/Private/RNReanimated/reanimated/Fabric/ReanimatedMountHook.h'),
+      File.join(__dir__, '..', 'node_modules', 'react-native-reanimated', 'Common', 'cpp', 'reanimated', 'Fabric', 'ReanimatedMountHook.h'),
+      File.join(__dir__, '..', 'node_modules', 'react-native-reanimated', 'Common', 'cpp', 'reanimated', 'Fabric', 'ReanimatedMountHook.cpp'),
+    ].each do |f|
+      next unless File.exist?(f)
+      content = File.read(f)
+      if content.include?('double mountTime') || content.include?('double /*mountTime*/')
+        content = content.gsub('double mountTime', 'HighResTimeStamp mountTime')
+                         .gsub('double /*mountTime*/', 'HighResTimeStamp /*mountTime*/')
+        File.write(f, content)
+        puts "patched #{File.basename(f)}: double -> HighResTimeStamp"
       end
     end
 `;
