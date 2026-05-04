@@ -346,6 +346,18 @@ module.exports = function withCxx20(config) {
     src = File.join(__dir__, 'FollyPatch/folly/coro/Coroutine.h')
     dst = File.join(folly_coro_dir, 'Coroutine.h')
     FileUtils.cp(src, dst)
+
+    # Fix ReanimatedMountHook.h: older reanimated used 'double mountTime' but
+    # RN 0.81's UIManagerMountHook uses HighResTimeStamp — patch to match.
+    mount_hook = File.join(installer.sandbox.root, 'Headers/Private/RNReanimated/reanimated/Fabric/ReanimatedMountHook.h')
+    if File.exist?(mount_hook)
+      mh = File.read(mount_hook)
+      if mh.include?('double mountTime')
+        mh = mh.gsub('double mountTime', 'HighResTimeStamp mountTime')
+        File.write(mount_hook, mh)
+        puts "patched ReanimatedMountHook.h: double -> HighResTimeStamp"
+      end
+    end
 `;
 
       contents = contents.replace(
