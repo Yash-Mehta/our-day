@@ -67,6 +67,7 @@
       "expo-web-browser",
       "expo-secure-store",
       "@react-native-community/datetimepicker",
+      "./plugins/withCxx20",
       [
         "expo-build-properties",
         {
