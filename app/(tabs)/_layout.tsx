@@ -1,5 +1,5 @@
 import { Tabs } from 'expo-router';
-import { Platform } from 'react-native';
+import { Alert, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as WebBrowser from 'expo-web-browser';
 import { useAuthStore } from '../../store/authStore';
@@ -69,7 +69,7 @@ export default function TabLayout() {
         name="manage"
         options={{
           title: isHost ? 'Admin' : 'Registry',
-          href: isHost ? '/(tabs)/manage' : undefined,
+          href: isHost ? '/(tabs)/manage' : null,
           tabBarIcon: ({ color, size }) =>
             isHost ? (
               <Ionicons name="shield-outline" size={size} color={color} />
@@ -78,11 +78,19 @@ export default function TabLayout() {
             ),
         }}
         listeners={
-          !isHost && config?.registryUrl
+          !isHost
             ? {
                 tabPress: (e) => {
                   e.preventDefault();
-                  WebBrowser.openBrowserAsync(config.registryUrl!);
+                  if (config?.registryUrl) {
+                    WebBrowser.openBrowserAsync(config.registryUrl);
+                  } else {
+                    Alert.alert(
+                      '🎁 Registry coming soon',
+                      "The couple hasn't added their registry yet — check back closer to the big day!",
+                      [{ text: 'Can\'t wait!', style: 'cancel' }]
+                    );
+                  }
                 },
               }
             : undefined
