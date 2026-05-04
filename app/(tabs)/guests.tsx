@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { FlatList, TouchableOpacity, Text, View, StyleSheet, ActivityIndicator } from 'react-native';
-import { getDocs } from 'firebase/firestore';
+import { onSnapshot } from 'firebase/firestore';
 import { useRouter } from 'expo-router';
 import { useAuthStore } from '../../store/authStore';
 import { membersCol, UserDoc } from '../../lib/firestore';
@@ -21,12 +21,11 @@ export default function GuestsScreen() {
 
   useEffect(() => {
     if (!weddingId) return;
-    async function load() {
-      const snap = await getDocs(membersCol(weddingId!));
+    const unsub = onSnapshot(membersCol(weddingId), (snap) => {
       setGuests(snap.docs.map((d) => ({ uid: d.id, ...d.data() } as GuestItem)));
       setLoading(false);
-    }
-    load();
+    });
+    return unsub;
   }, [weddingId]);
 
   if (loading) {
