@@ -32,6 +32,7 @@ import * as ImagePicker from 'expo-image-picker';
 import * as ImageManipulator from 'expo-image-manipulator';
 import { db, storage } from '../../lib/firebase';
 import { UserDoc, membersCol, scheduleCol } from '../../lib/firestore';
+import * as WebBrowser from 'expo-web-browser';
 import { useAuthStore } from '../../store/authStore';
 import { useWeddingStore } from '../../store/weddingStore';
 import { ScreenWrapper } from '../../components/ScreenWrapper';
@@ -107,14 +108,89 @@ const BLANK_EVENT = {
   icon: '', color: 'accent' as EventColor, dress: '', primary: false,
 };
 
+function GuestRegistryView() {
+  const { config } = useWeddingStore();
+
+  if (config?.registryUrl) {
+    return (
+      <ScreenWrapper>
+        <View style={gStyles.container}>
+          <Text style={gStyles.icon}>🎁</Text>
+          <Text style={gStyles.title}>Gift Registry</Text>
+          <Text style={gStyles.subtitle}>
+            The couple has put together a wishlist just for you.
+          </Text>
+          <TouchableOpacity
+            style={gStyles.btn}
+            onPress={() => WebBrowser.openBrowserAsync(config.registryUrl!)}
+            activeOpacity={0.85}>
+            <Text style={gStyles.btnText}>View Registry</Text>
+          </TouchableOpacity>
+        </View>
+      </ScreenWrapper>
+    );
+  }
+
+  return (
+    <ScreenWrapper>
+      <View style={gStyles.container}>
+        <Text style={gStyles.title}>Registry coming soon</Text>
+        <Text style={gStyles.subtitle}>
+          The couple hasn't added their registry yet — check back closer to the big day!
+        </Text>
+      </View>
+    </ScreenWrapper>
+  );
+}
+
+const gStyles = StyleSheet.create({
+  container: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 40,
+    paddingBottom: 60,
+  },
+  icon: { fontSize: 52, marginBottom: 16 },
+  title: {
+    fontSize: 24,
+    fontFamily: theme.fonts.serif,
+    color: theme.colors.ink,
+    textAlign: 'center',
+    marginBottom: 10,
+  },
+  subtitle: {
+    fontSize: 14,
+    fontFamily: theme.fonts.sans,
+    color: theme.colors.ink3,
+    textAlign: 'center',
+    lineHeight: 20,
+    marginBottom: 28,
+  },
+  btn: {
+    backgroundColor: theme.colors.accent,
+    borderRadius: theme.radii.pill,
+    paddingVertical: 14,
+    paddingHorizontal: 36,
+  },
+  btnText: {
+    color: theme.colors.bg,
+    fontSize: 15,
+    fontWeight: '600',
+    fontFamily: theme.fonts.sans,
+  },
+});
+
 export default function ManageScreen() {
   const [tab, setTab] = useState<Tab>('guests');
   const [guests, setGuests] = useState<GuestItem[]>([]);
   const [events, setEvents] = useState<ScheduleItem[]>([]);
   const [loadingGuests, setLoadingGuests] = useState(true);
   const [loadingSchedule, setLoadingSchedule] = useState(true);
-  const { weddingId, firebaseUser } = useAuthStore();
+  const { weddingId, firebaseUser, role } = useAuthStore();
   const { config } = useWeddingStore();
+
+  if (role !== 'host') return <GuestRegistryView />;
 
 
   // Add form
