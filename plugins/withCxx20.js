@@ -219,7 +219,7 @@ class ExtendedCoroutineHandle {
 
   template <typename T, typename Void = void>
   struct use_extended_handle {
-    static_assert(require_sizeof<T>, "`use_extended_handle` on incomplete type");
+    static_assert(require_sizeof<T>, "\`use_extended_handle\` on incomplete type");
     static constexpr bool value = false;
   };
 
