@@ -207,6 +207,7 @@ export default function FeedScreen() {
               isHost={role === 'host'}
               onDelete={role === 'host' ? () => handleDelete(item) : undefined}
               onTogglePin={role === 'host' ? () => handleTogglePin(item) : undefined}
+              onEdit={role === 'host' ? (caption) => handleEditCaption(item, caption) : undefined}
             />
           )
         }

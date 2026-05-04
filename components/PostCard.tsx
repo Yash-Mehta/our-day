@@ -1,5 +1,5 @@
 import { useRef, useState, useEffect } from 'react';
-import { View, Text, Image, TouchableOpacity, StyleSheet, Animated, Alert } from 'react-native';
+import { View, Text, Image, TextInput, TouchableOpacity, StyleSheet, Animated, Alert } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { Avatar } from './Avatar';
 import { theme } from '../constants/theme';
@@ -25,13 +25,28 @@ interface Props {
   isHost?: boolean;
   onDelete?: () => void;
   onTogglePin?: () => void;
+  onEdit?: (newCaption: string) => void;
 }
 
-export function PostCard({ post, liked, onLike, onCommentPress, isHost, onDelete, onTogglePin }: Props) {
+export function PostCard({ post, liked, onLike, onCommentPress, isHost, onDelete, onTogglePin, onEdit }: Props) {
   const heartScale = useRef(new Animated.Value(1)).current;
   const timeAgo = post.createdAt?.toDate ? formatAgo(post.createdAt.toDate()) : '';
 
   const [optimisticCount, setOptimisticCount] = useState<number | null>(null);
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(post.caption);
+
+  function handleSave() {
+    const trimmed = draft.trim();
+    if (!trimmed) return;
+    onEdit?.(trimmed);
+    setEditing(false);
+  }
+
+  function handleCancel() {
+    setDraft(post.caption);
+    setEditing(false);
+  }
 
   function handleLike() {
     if (!liked) {
@@ -70,6 +85,7 @@ export function PostCard({ post, liked, onLike, onCommentPress, isHost, onDelete
             onPress={() =>
               Alert.alert('Post options', undefined, [
                 { text: post.pinned ? 'Unpin' : 'Pin to top', onPress: onTogglePin },
+                { text: 'Edit caption', onPress: () => setEditing(true) },
                 { text: 'Delete post', style: 'destructive', onPress: onDelete },
                 { text: 'Cancel', style: 'cancel' },
               ])
@@ -83,7 +99,28 @@ export function PostCard({ post, liked, onLike, onCommentPress, isHost, onDelete
       {post.photoURL && (
         <Image source={{ uri: post.photoURL }} style={styles.photo} resizeMode="cover" />
       )}
-      {post.caption ? <Text style={styles.caption}>{post.caption}</Text> : null}
+      {editing ? (
+        <View style={styles.editWrap}>
+          <TextInput
+            style={styles.editInput}
+            value={draft}
+            onChangeText={setDraft}
+            multiline
+            autoFocus
+            placeholderTextColor={theme.colors.ink4}
+          />
+          <View style={styles.editActions}>
+            <TouchableOpacity onPress={handleCancel} style={styles.cancelBtn}>
+              <Text style={styles.cancelText}>Cancel</Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={handleSave} style={styles.saveBtn}>
+              <Text style={styles.saveText}>Save</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      ) : post.caption ? (
+        <Text style={styles.caption}>{post.caption}</Text>
+      ) : null}
       <View style={styles.actions}>
         <TouchableOpacity style={styles.action} onPress={handleLike}>
           <Animated.Text
@@ -169,4 +206,27 @@ const styles = StyleSheet.create({
   actionIcon: { fontSize: 18, color: theme.colors.ink4 },
   liked: { color: theme.colors.heart },
   actionCount: { fontSize: 14, color: theme.colors.ink3, fontFamily: theme.fonts.sans },
+  editWrap: { paddingHorizontal: 12, paddingBottom: 8, gap: 10 },
+  editInput: {
+    borderWidth: 1,
+    borderColor: theme.colors.line,
+    borderRadius: theme.radii.md,
+    padding: 12,
+    fontSize: 14,
+    lineHeight: 21,
+    color: theme.colors.ink,
+    fontFamily: theme.fonts.sans,
+    minHeight: 70,
+    textAlignVertical: 'top',
+  },
+  editActions: { flexDirection: 'row', justifyContent: 'flex-end', gap: 10 },
+  cancelBtn: { paddingVertical: 8, paddingHorizontal: 14 },
+  cancelText: { fontSize: 14, color: theme.colors.ink3, fontFamily: theme.fonts.sans },
+  saveBtn: {
+    backgroundColor: theme.colors.accent,
+    borderRadius: theme.radii.pill,
+    paddingVertical: 8,
+    paddingHorizontal: 18,
+  },
+  saveText: { fontSize: 14, fontWeight: '600', color: theme.colors.bg, fontFamily: theme.fonts.sans },
 });
