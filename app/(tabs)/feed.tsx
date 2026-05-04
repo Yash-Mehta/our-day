@@ -48,7 +48,8 @@ export default function FeedScreen() {
     if (!weddingId) return;
     const q = query(postsCol(weddingId), orderBy('createdAt', 'desc'));
     const unsub = onSnapshot(q, (snap) => {
-      setPosts(snap.docs.map((d) => ({ id: d.id, ...d.data() } as Post)));
+      const all = snap.docs.map((d) => ({ id: d.id, ...d.data() } as Post));
+      setPosts(all.sort((a, b) => (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0)));
       setLoading(false);
     });
     return unsub;
