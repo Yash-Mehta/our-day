@@ -4,7 +4,10 @@
     "slug": "our-day",
     "version": "1.0.0",
     "scheme": "ourday",
-    "platforms": ["ios", "android"],
+    "platforms": [
+      "ios",
+      "android"
+    ],
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
@@ -15,14 +18,16 @@
     },
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "com.ourday.app",
-      "buildNumber": "1",
+      "bundleIdentifier": "com.ourday.wedding",
+      "buildNumber": "4",
       "infoPlist": {
         "NSCameraUsageDescription": "Our Day uses your camera so you can share photos with your wedding party.",
         "NSPhotoLibraryUsageDescription": "Our Day accesses your photos so you can share them with your wedding party.",
         "NSPhotoLibraryAddUsageDescription": "Our Day saves photos to your library.",
         "NSMicrophoneUsageDescription": "Our Day may access your microphone when recording videos.",
-        "UIBackgroundModes": ["remote-notification"],
+        "UIBackgroundModes": [
+          "remote-notification"
+        ],
         "ITSAppUsesNonExemptEncryption": false
       }
     },
@@ -63,6 +68,7 @@
       "expo-secure-store",
       "@react-native-community/datetimepicker"
     ],
+    "newArchEnabled": false,
     "experiments": {
       "typedRoutes": true
     },
