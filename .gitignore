@@ -41,6 +41,10 @@ yarn-error.*
 /ios
 /android
 
+# credentials
+credentials.json
+credentials/
+
 # tool artifacts
 .claude-flow/
 .swarm/
