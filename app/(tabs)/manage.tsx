@@ -190,9 +190,6 @@ export default function ManageScreen() {
   const { weddingId, firebaseUser, role } = useAuthStore();
   const { config } = useWeddingStore();
 
-  if (role !== 'host') return <GuestRegistryView />;
-
-
   // Add form
   const [newFields, setNewFields] = useState(BLANK_EVENT);
   const [addingEvent, setAddingEvent] = useState(false);
@@ -220,6 +217,8 @@ export default function ManageScreen() {
     });
     return unsub;
   }, [weddingId]);
+
+  if (role !== 'host') return <GuestRegistryView />;
 
   async function handlePromote(uid: string) {
     if (!weddingId) return;
