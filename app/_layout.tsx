@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
-import { Animated, StyleSheet, Text, View } from 'react-native';
+import { Alert, Animated, StyleSheet, Text, View } from 'react-native';
 import { Slot, useRouter, useSegments } from 'expo-router';
-import { onAuthStateChanged } from 'firebase/auth';
+import { onAuthStateChanged, signOut } from 'firebase/auth';
 import { useFonts } from 'expo-font';
 import {
   CormorantGaramond_500Medium,
@@ -87,16 +87,29 @@ export default function RootLayout() {
         setWeddingId(wId);
 
         if (wId) {
-          const memberDoc = await getMember(wId, user.uid);
-          if (memberDoc) {
-            setUserDoc(memberDoc);
-            registerForPushNotifications(user.uid, wId).catch(() => {});
-          } else {
-            // Wedding was deleted or user removed — clear stale weddingId so
-            // they get routed back to landing to re-onboard or join a new party.
-            await clearCredentials();
-            setWeddingId(null);
-            setUserDoc(null);
+          try {
+            const memberDoc = await getMember(wId, user.uid);
+            if (memberDoc) {
+              setUserDoc(memberDoc);
+              registerForPushNotifications(user.uid, wId).catch(() => {});
+            } else {
+              await clearCredentials();
+              setWeddingId(null);
+              setUserDoc(null);
+            }
+          } catch (e: any) {
+            if (e?.code === 'permission-denied') {
+              await clearCredentials();
+              setWeddingId(null);
+              setUserDoc(null);
+              Alert.alert(
+                'Removed from wedding',
+                "You've been removed from this wedding party. You can join a new one with an invite code."
+              );
+              await signOut(auth);
+            } else {
+              throw e;
+            }
           }
         } else {
           setUserDoc(null);

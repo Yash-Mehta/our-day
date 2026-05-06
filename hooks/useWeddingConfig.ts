@@ -20,7 +20,7 @@ export function useWeddingConfig(weddingId: string | null) {
         setConfig(null);
       }
       setLoading(false);
-    });
+    }, (err) => { if (err.code !== 'permission-denied') console.warn(err); });
     return unsub;
   }, [weddingId]);
 }

@@ -35,6 +35,7 @@ import { UserDoc, membersCol, scheduleCol } from '../../lib/firestore';
 import * as WebBrowser from 'expo-web-browser';
 import { useAuthStore } from '../../store/authStore';
 import { useWeddingStore } from '../../store/weddingStore';
+import { configFromDoc } from '../../lib/weddingConfig';
 import { ScreenWrapper } from '../../components/ScreenWrapper';
 import { GuestRow } from '../../components/GuestRow';
 import { theme } from '../../constants/theme';
@@ -204,7 +205,7 @@ export default function ManageScreen() {
     const unsub = onSnapshot(membersCol(weddingId), (snap) => {
       setGuests(snap.docs.map((d) => ({ uid: d.id, ...d.data() } as GuestItem)));
       setLoadingGuests(false);
-    });
+    }, (err) => { if (err.code !== 'permission-denied') console.warn(err); });
     return unsub;
   }, [weddingId]);
 
@@ -214,7 +215,7 @@ export default function ManageScreen() {
     const unsub = onSnapshot(q, (snap) => {
       setEvents(snap.docs.map((d) => ({ id: d.id, ...d.data() } as ScheduleItem)));
       setLoadingSchedule(false);
-    });
+    }, (err) => { if (err.code !== 'permission-denied') console.warn(err); });
     return unsub;
   }, [weddingId]);
 
@@ -379,7 +380,10 @@ export default function ManageScreen() {
       )}
 
       {tab === 'settings' && (
-        <LogoSettings weddingId={weddingId} config={config} />
+        <ScrollView showsVerticalScrollIndicator={false}>
+          <WeddingDetailsEditor weddingId={weddingId} config={config} />
+          <LogoSettings weddingId={weddingId} config={config} />
+        </ScrollView>
       )}
 
       {tab === 'schedule' && (
@@ -443,6 +447,169 @@ export default function ManageScreen() {
     </ScreenWrapper>
   );
 }
+
+// ── Wedding Details Editor ────────────────────────────────────────────────────
+
+function WeddingDetailsEditor({ weddingId, config }: { weddingId: string | null; config: any }) {
+  const [person1, setPerson1] = useState(config?.person1First ?? '');
+  const [person2, setPerson2] = useState(config?.person2First ?? '');
+  const [venue, setVenue] = useState(config?.venue ?? '');
+  const [location, setLocation] = useState(config?.location ?? '');
+  const [hashtag, setHashtag] = useState(config?.hashtag ?? '');
+  const [registryUrl, setRegistryUrl] = useState(config?.registryUrl ?? '');
+  const [weddingDate, setWeddingDate] = useState<Date>(
+    config?.weddingDate instanceof Date ? config.weddingDate : new Date()
+  );
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [saving, setSaving] = useState(false);
+
+  function deriveDateFields(d: Date) {
+    const y = d.getFullYear();
+    const mo = d.getMonth();
+    const day = d.getDate();
+    const months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+    const shortMonths = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    const weekdays = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+    const weddingDateISO = `${y}-${String(mo + 1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
+    const dateStamp = `${months[mo]} ${day}, ${y}`;
+    const displayDate = `${weekdays[d.getDay()]}, ${day} ${months[mo]} ${y}`;
+    const shortDate = `${shortMonths[mo]} ${day}`;
+    return { weddingDateISO, dateStamp, displayDate, shortDate };
+  }
+
+  function onDateChange(_: any, date?: Date) {
+    if (Platform.OS === 'android') setShowDatePicker(false);
+    if (date) setWeddingDate(date);
+  }
+
+  async function handleSave() {
+    if (!weddingId) return;
+    setSaving(true);
+    try {
+      const p1 = person1.trim();
+      const p2 = person2.trim();
+      const coupleName = p1 && p2 ? `${p1} & ${p2}` : config?.coupleName ?? '';
+      const dateFields = deriveDateFields(weddingDate);
+      const updatedFields: Record<string, any> = {
+        person1First: p1,
+        person2First: p2,
+        coupleName,
+        venue: venue.trim(),
+        location: location.trim(),
+        hashtag: hashtag.trim(),
+        registryUrl: registryUrl.trim() || null,
+        ...dateFields,
+      };
+      await updateDoc(doc(db, 'weddings', weddingId), updatedFields);
+      // Update weddingsByCode preview docs
+      const preview = { coupleName, dateStamp: dateFields.dateStamp, venue: venue.trim(), monogramInitials: config?.monogramInitials ?? '' };
+      const guestCode = config?.guestInviteCode;
+      const hostCode = config?.hostInviteCode;
+      if (guestCode) await updateDoc(doc(db, 'weddingsByCode', guestCode), { preview }).catch(() => {});
+      if (hostCode) await updateDoc(doc(db, 'weddingsByCode', hostCode), { preview }).catch(() => {});
+      // Refresh store
+      useWeddingStore.getState().setConfig(configFromDoc({ ...config, ...updatedFields, weddingId }));
+      Alert.alert('Saved', 'Wedding details updated.');
+    } catch (e: any) {
+      Alert.alert('Error', e.message ?? 'Could not save changes.');
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  const dateLabel = weddingDate.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
+
+  return (
+    <View style={dStyles.container}>
+      <Text style={lStyles.sectionHead}>WEDDING DETAILS</Text>
+
+      <Text style={dStyles.fieldLabel}>COUPLE NAMES</Text>
+      <View style={dStyles.row}>
+        <TextInput
+          style={[dStyles.input, { flex: 1 }]}
+          value={person1}
+          onChangeText={setPerson1}
+          placeholder="Person 1"
+          placeholderTextColor={theme.colors.ink4}
+        />
+        <View style={{ width: 10 }} />
+        <TextInput
+          style={[dStyles.input, { flex: 1 }]}
+          value={person2}
+          onChangeText={setPerson2}
+          placeholder="Person 2"
+          placeholderTextColor={theme.colors.ink4}
+        />
+      </View>
+
+      <Text style={dStyles.fieldLabel}>WEDDING DATE</Text>
+      <TouchableOpacity style={[dStyles.input, dStyles.dateBtn]} onPress={() => setShowDatePicker(true)} activeOpacity={0.7}>
+        <Text style={dStyles.dateBtnText}>{dateLabel}</Text>
+      </TouchableOpacity>
+
+      {Platform.OS === 'android' && showDatePicker && (
+        <DateTimePicker value={weddingDate} mode="date" display="default" onChange={onDateChange} />
+      )}
+      {Platform.OS === 'ios' && (
+        <Modal visible={showDatePicker} transparent animationType="slide">
+          <View style={fStyles.pickerOverlay}>
+            <View style={fStyles.pickerSheet}>
+              <View style={fStyles.pickerHeader}>
+                <TouchableOpacity onPress={() => setShowDatePicker(false)}>
+                  <Text style={fStyles.pickerDone}>Done</Text>
+                </TouchableOpacity>
+              </View>
+              <DateTimePicker value={weddingDate} mode="date" display="spinner" onChange={onDateChange} textColor={theme.colors.ink} style={{ height: 180 }} />
+            </View>
+          </View>
+        </Modal>
+      )}
+
+      <Text style={dStyles.fieldLabel}>VENUE</Text>
+      <TextInput style={dStyles.input} value={venue} onChangeText={setVenue} placeholder="Full venue name" placeholderTextColor={theme.colors.ink4} />
+
+      <Text style={dStyles.fieldLabel}>LOCATION</Text>
+      <TextInput style={dStyles.input} value={location} onChangeText={setLocation} placeholder="City, Country" placeholderTextColor={theme.colors.ink4} />
+
+      <Text style={dStyles.fieldLabel}>HASHTAG</Text>
+      <TextInput style={dStyles.input} value={hashtag} onChangeText={setHashtag} placeholder="#OurWedding" placeholderTextColor={theme.colors.ink4} autoCapitalize="none" />
+
+      <Text style={dStyles.fieldLabel}>REGISTRY URL</Text>
+      <TextInput style={dStyles.input} value={registryUrl} onChangeText={setRegistryUrl} placeholder="https://..." placeholderTextColor={theme.colors.ink4} autoCapitalize="none" keyboardType="url" />
+
+      <TouchableOpacity
+        style={[dStyles.saveBtn, saving && dStyles.saveBtnDisabled]}
+        onPress={handleSave}
+        disabled={saving}
+        activeOpacity={0.85}>
+        {saving
+          ? <ActivityIndicator color={theme.colors.bg} size="small" />
+          : <Text style={dStyles.saveBtnText}>Save changes</Text>}
+      </TouchableOpacity>
+    </View>
+  );
+}
+
+const dStyles = StyleSheet.create({
+  container: { padding: 24, paddingBottom: 8, borderBottomWidth: 0.5, borderColor: theme.colors.line },
+  fieldLabel: { fontSize: 9, fontWeight: '700', letterSpacing: 1.2, color: theme.colors.ink4, fontFamily: theme.fonts.sans, marginBottom: 4, marginTop: 10 },
+  row: { flexDirection: 'row' },
+  input: {
+    borderWidth: 1, borderColor: theme.colors.line, borderRadius: theme.radii.md,
+    paddingHorizontal: 10, paddingVertical: 8, fontSize: 14,
+    color: theme.colors.ink, backgroundColor: theme.colors.card, fontFamily: theme.fonts.sans,
+  },
+  dateBtn: { justifyContent: 'center' },
+  dateBtnText: { fontSize: 14, color: theme.colors.ink, fontFamily: theme.fonts.sans },
+  saveBtn: {
+    backgroundColor: theme.colors.accent, borderRadius: theme.radii.pill,
+    paddingVertical: 14, alignItems: 'center', marginTop: 20,
+  },
+  saveBtnDisabled: { opacity: 0.5 },
+  saveBtnText: { color: theme.colors.bg, fontSize: 15, fontWeight: '600', fontFamily: theme.fonts.sans },
+});
+
+// ── Danger Zone ───────────────────────────────────────────────────────────────
 
 // ── Logo / monogram settings ──────────────────────────────────────────────────
 
@@ -511,7 +678,7 @@ function LogoSettings({ weddingId, config }: { weddingId: string | null; config:
   }
 
   return (
-    <ScrollView contentContainerStyle={lStyles.container} showsVerticalScrollIndicator={false}>
+    <View style={lStyles.container}>
       <Text style={lStyles.sectionHead}>WEDDING LOGO</Text>
       <Text style={lStyles.hint}>
         Shown in the feed header for all guests. Upload your own photo or we'll use your initials.
@@ -551,12 +718,12 @@ function LogoSettings({ weddingId, config }: { weddingId: string | null; config:
             : <Text style={lStyles.removeBtnText}>Remove photo</Text>}
         </TouchableOpacity>
       )}
-    </ScrollView>
+    </View>
   );
 }
 
 const lStyles = StyleSheet.create({
-  container: { padding: 24, paddingBottom: 100 },
+  container: { padding: 24, paddingBottom: 8, borderBottomWidth: 0.5, borderColor: theme.colors.line },
   sectionHead: {
     fontSize: 10, fontWeight: '700', letterSpacing: 2, textTransform: 'uppercase',
     color: theme.colors.accentDeep, fontFamily: theme.fonts.sans, marginBottom: 6,

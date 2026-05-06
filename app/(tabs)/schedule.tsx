@@ -46,7 +46,7 @@ export default function ScheduleScreen() {
     const unsub = onSnapshot(q, (snap) => {
       setEvents(snap.docs.map((d) => ({ id: d.id, ...d.data() } as ScheduleEvent)));
       setLoading(false);
-    });
+    }, (err) => { if (err.code !== 'permission-denied') console.warn(err); });
     return unsub;
   }, [weddingId]);
 

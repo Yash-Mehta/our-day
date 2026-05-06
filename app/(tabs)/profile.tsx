@@ -16,7 +16,7 @@ import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { signOut } from 'firebase/auth';
 import { auth, storage } from '../../lib/firebase';
 import { clearCredentials } from '../../lib/secureAuth';
-import { updateMember } from '../../lib/firestore';
+import { updateMember, deleteAccount } from '../../lib/firestore';
 import { useAuthStore } from '../../store/authStore';
 import { ScreenWrapper } from '../../components/ScreenWrapper';
 import { Avatar } from '../../components/Avatar';
@@ -95,6 +95,38 @@ export default function ProfileScreen() {
     }
   }
 
+  async function handleDeleteAccount() {
+    Alert.alert(
+      'Delete account',
+      'This will permanently delete your account and remove you from this wedding. This cannot be undone.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            if (!firebaseUser) return;
+            try {
+              await deleteAccount(firebaseUser.uid, weddingId ?? null);
+              await clearCredentials();
+              useAuthStore.getState().clear();
+              await auth.currentUser?.delete();
+            } catch (e: any) {
+              if (e?.code === 'auth/requires-recent-login') {
+                Alert.alert(
+                  'Re-authentication required',
+                  'Please sign out and sign back in, then try deleting your account again.'
+                );
+                return;
+              }
+              throw e;
+            }
+          },
+        },
+      ]
+    );
+  }
+
   async function handleSignOut() {
     Alert.alert('Sign out', 'Are you sure?', [
       { text: 'Cancel', style: 'cancel' },
@@ -170,6 +202,10 @@ export default function ProfileScreen() {
 
         <TouchableOpacity style={styles.legalBtn} onPress={() => router.push('/privacy')} activeOpacity={0.7}>
           <Text style={styles.legalText}>Privacy Policy</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity style={styles.deleteAccountBtn} onPress={handleDeleteAccount} activeOpacity={0.7}>
+          <Text style={styles.deleteAccountText}>Delete account</Text>
         </TouchableOpacity>
       </ScrollView>
     </ScreenWrapper>
@@ -248,4 +284,6 @@ const styles = StyleSheet.create({
   signOutText: { fontSize: 14, color: theme.colors.ink3, fontFamily: theme.fonts.sans },
   legalBtn: { alignItems: 'center', paddingVertical: 8 },
   legalText: { fontSize: 12, color: theme.colors.ink4, fontFamily: theme.fonts.sans, textDecorationLine: 'underline' },
+  deleteAccountBtn: { alignItems: 'center', paddingVertical: 8, marginTop: 4 },
+  deleteAccountText: { fontSize: 12, color: theme.colors.ink4, fontFamily: theme.fonts.sans, textDecorationLine: 'underline' },
 });

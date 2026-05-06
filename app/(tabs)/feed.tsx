@@ -51,7 +51,7 @@ export default function FeedScreen() {
       const all = snap.docs.map((d) => ({ id: d.id, ...d.data() } as Post));
       setPosts(all.sort((a, b) => (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0)));
       setLoading(false);
-    });
+    }, (err) => { if (err.code !== 'permission-denied') console.warn(err); });
     return unsub;
   }, [weddingId]);
 
@@ -68,7 +68,7 @@ export default function FeedScreen() {
           else next.delete(post.id);
           return next;
         });
-      });
+      }, (err) => { if (err.code !== 'permission-denied') console.warn(err); });
       unsubscribers.push(unsub);
     });
     return () => unsubscribers.forEach((u) => u());

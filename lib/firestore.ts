@@ -4,6 +4,7 @@ import {
   getDoc,
   setDoc,
   updateDoc,
+  deleteDoc,
   serverTimestamp,
 } from 'firebase/firestore';
 import { db } from './firebase';
@@ -108,4 +109,13 @@ export async function updateUser(
   weddingId: string
 ) {
   await updateMember(weddingId, uid, data);
+}
+
+export async function deleteAccount(uid: string, weddingId: string | null) {
+  // Delete member doc
+  if (weddingId) {
+    await deleteDoc(doc(db, 'weddings', weddingId, 'members', uid));
+  }
+  // Delete user index
+  await deleteDoc(doc(db, 'users', uid));
 }

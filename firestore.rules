@@ -27,7 +27,7 @@ service cloud.firestore {
     match /users/{uid} {
       allow read: if isAuth();
       allow create, update: if isOwner(uid);
-      allow delete: if false;
+      allow delete: if isOwner(uid);
     }
 
     // ── Wedding document (config) ─────────────────────────────────────────────
@@ -42,7 +42,7 @@ service cloud.firestore {
         allow read: if isMember(weddingId);
         allow create: if isAuth() && isOwner(uid);
         allow update: if isOwner(uid) || isHost(weddingId);
-        allow delete: if isHost(weddingId);
+        allow delete: if isHost(weddingId) || isOwner(uid);
       }
 
       // ── Posts ────────────────────────────────────────────────────────────────

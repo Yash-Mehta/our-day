@@ -21,7 +21,7 @@ export default function GuestProfileScreen() {
     const unsub = onSnapshot(doc(db, 'weddings', weddingId, 'members', uid), (snap) => {
       setUser(snap.exists() ? (snap.data() as UserDoc) : null);
       setLoading(false);
-    });
+    }, (err) => { if (err.code !== 'permission-denied') console.warn(err); });
     return unsub;
   }, [uid, weddingId]);
 

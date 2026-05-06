@@ -24,7 +24,7 @@ export default function GuestsScreen() {
     const unsub = onSnapshot(membersCol(weddingId), (snap) => {
       setGuests(snap.docs.map((d) => ({ uid: d.id, ...d.data() } as GuestItem)));
       setLoading(false);
-    });
+    }, (err) => { if (err.code !== 'permission-denied') console.warn(err); });
     return unsub;
   }, [weddingId]);
 

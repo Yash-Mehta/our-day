@@ -83,7 +83,7 @@ export function CommentSheet({ postId, onClose }: Props) {
     const unsub = onSnapshot(q, (snap) => {
       setComments(snap.docs.map((d) => ({ id: d.id, ...d.data() } as Comment)));
       setTimeout(() => listRef.current?.scrollToEnd({ animated: true }), 100);
-    });
+    }, (err) => { if (err.code !== 'permission-denied') console.warn(err); });
     return unsub;
   }, [postId, weddingId]);
 
