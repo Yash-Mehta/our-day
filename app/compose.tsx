@@ -31,14 +31,28 @@ export default function ComposeScreen() {
   const [posting, setPosting] = useState(false);
 
   async function pickImage() {
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ['images'],
-      allowsEditing: true,
-      quality: 0.85,
-    });
-    if (!result.canceled && result.assets[0]) {
-      setImageURI(result.assets[0].uri);
-    }
+    Alert.alert('Add photo', undefined, [
+      {
+        text: 'Camera',
+        onPress: async () => {
+          const { status } = await ImagePicker.requestCameraPermissionsAsync();
+          if (status !== 'granted') {
+            Alert.alert('Camera access needed', 'Please allow camera access in Settings.');
+            return;
+          }
+          const result = await ImagePicker.launchCameraAsync({ allowsEditing: true, quality: 0.85 });
+          if (!result.canceled && result.assets[0]) setImageURI(result.assets[0].uri);
+        },
+      },
+      {
+        text: 'Photo Library',
+        onPress: async () => {
+          const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], allowsEditing: true, quality: 0.85 });
+          if (!result.canceled && result.assets[0]) setImageURI(result.assets[0].uri);
+        },
+      },
+      { text: 'Cancel', style: 'cancel' },
+    ]);
   }
 
   async function handlePost() {

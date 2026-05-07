@@ -13,6 +13,7 @@ import {
   Image,
   Modal,
   Platform,
+  Share,
 } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import {
@@ -382,6 +383,7 @@ export default function ManageScreen() {
       {tab === 'settings' && (
         <ScrollView showsVerticalScrollIndicator={false}>
           <WeddingDetailsEditor weddingId={weddingId} config={config} />
+          <InviteCodes config={config} />
           <LogoSettings weddingId={weddingId} config={config} />
         </ScrollView>
       )}
@@ -607,6 +609,59 @@ const dStyles = StyleSheet.create({
   },
   saveBtnDisabled: { opacity: 0.5 },
   saveBtnText: { color: theme.colors.bg, fontSize: 15, fontWeight: '600', fontFamily: theme.fonts.sans },
+});
+
+// ── Invite Codes ─────────────────────────────────────────────────────────────
+
+function InviteCodes({ config }: { config: any }) {
+  const guestCode: string = config?.guestInviteCode ?? '—';
+  const hostCode: string = config?.hostInviteCode ?? '—';
+
+  async function handleShare(code: string) {
+    try {
+      await Share.share({ message: code });
+    } catch {}
+  }
+
+  return (
+    <View style={icStyles.container}>
+      <Text style={lStyles.sectionHead}>INVITE CODES</Text>
+
+      <View style={icStyles.row}>
+        <View style={icStyles.labelWrap}>
+          <Text style={dStyles.fieldLabel}>GUEST CODE</Text>
+          <Text style={icStyles.code}>{guestCode}</Text>
+        </View>
+        <TouchableOpacity style={icStyles.shareBtn} onPress={() => handleShare(guestCode)} activeOpacity={0.7}>
+          <Text style={icStyles.shareBtnText}>Share</Text>
+        </TouchableOpacity>
+      </View>
+
+      <View style={icStyles.row}>
+        <View style={icStyles.labelWrap}>
+          <Text style={dStyles.fieldLabel}>HOST CODE</Text>
+          <Text style={icStyles.code}>{hostCode}</Text>
+        </View>
+        <TouchableOpacity style={icStyles.shareBtn} onPress={() => handleShare(hostCode)} activeOpacity={0.7}>
+          <Text style={icStyles.shareBtnText}>Share</Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+}
+
+const icStyles = StyleSheet.create({
+  container: { padding: 24, paddingBottom: 16, borderBottomWidth: 0.5, borderColor: theme.colors.line },
+  row: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 10 },
+  labelWrap: { flex: 1 },
+  code: { fontSize: 15, fontFamily: theme.fonts.sans, color: theme.colors.ink, fontWeight: '600', marginTop: 2 },
+  shareBtn: {
+    paddingHorizontal: 14, paddingVertical: 6,
+    borderRadius: theme.radii.pill,
+    borderWidth: 1, borderColor: theme.colors.accent,
+    marginLeft: 12,
+  },
+  shareBtnText: { fontSize: 13, fontWeight: '600', color: theme.colors.accent, fontFamily: theme.fonts.sans },
 });
 
 // ── Danger Zone ───────────────────────────────────────────────────────────────
