@@ -183,9 +183,9 @@ export default function ProfileSetupScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { padding: 32, paddingTop: 52 },
-  title: { fontSize: 28, fontWeight: '700', marginBottom: 20, color: theme.colors.ink, fontFamily: theme.fonts.serif },
-  avatarContainer: { alignSelf: 'center', marginBottom: 16, alignItems: 'center' },
+  container: { padding: 32, paddingTop: 80 },
+  title: { fontSize: 28, fontWeight: '700', marginBottom: 32, color: theme.colors.ink, fontFamily: theme.fonts.serif },
+  avatarContainer: { alignSelf: 'center', marginBottom: 24, alignItems: 'center' },
   avatar: { width: 100, height: 100, borderRadius: 50 },
   avatarPlaceholder: {
     width: 100, height: 100, borderRadius: 50, backgroundColor: theme.colors.surface2,
@@ -196,7 +196,7 @@ const styles = StyleSheet.create({
   input: {
     borderWidth: 1, borderColor: theme.colors.lineStrong, borderRadius: theme.radii.md,
     padding: 16, fontSize: 16, marginBottom: 12, backgroundColor: theme.colors.card,
-    fontFamily: theme.fonts.sans, color: theme.colors.ink,
+    fontFamily: theme.fonts.sans, color: theme.colors.ink, letterSpacing: 0,
   },
   multiline: { minHeight: 80, textAlignVertical: 'top' },
   charCount: { fontSize: 12, color: theme.colors.ink4, textAlign: 'right', marginBottom: 16, fontFamily: theme.fonts.sans },
