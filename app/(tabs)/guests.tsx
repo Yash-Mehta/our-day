@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { FlatList, TouchableOpacity, Text, View, StyleSheet, ActivityIndicator } from 'react-native';
+import { FlatList, TouchableOpacity, Text, View, StyleSheet, ActivityIndicator, Dimensions } from 'react-native';
 import { onSnapshot } from 'firebase/firestore';
 import { useRouter } from 'expo-router';
 import { useAuthStore } from '../../store/authStore';
@@ -12,6 +12,8 @@ import { theme } from '../../constants/theme';
 interface GuestItem extends UserDoc {
   uid: string;
 }
+
+const CARD_WIDTH = (Dimensions.get('window').width - 12 * 2 - 10) / 2;
 
 export default function GuestsScreen() {
   const [guests, setGuests] = useState<GuestItem[]>([]);
@@ -93,7 +95,7 @@ const styles = StyleSheet.create({
   },
   sub: { fontSize: 12, color: theme.colors.ink3, marginTop: 2, fontFamily: theme.fonts.sans },
   card: {
-    flex: 1,
+    width: CARD_WIDTH,
     backgroundColor: theme.colors.card,
     borderRadius: theme.radii.lg,
     padding: 16,
