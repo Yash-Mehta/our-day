@@ -23,7 +23,6 @@ import {
   updateDoc,
   deleteDoc,
   addDoc,
-  writeBatch,
   query,
   orderBy,
   Timestamp,
@@ -212,7 +211,7 @@ export default function ManageScreen() {
 
   useEffect(() => {
     if (!weddingId) return;
-    const q = query(scheduleCol(weddingId), orderBy('order', 'asc'));
+    const q = query(scheduleCol(weddingId), orderBy('startTime', 'asc'));
     const unsub = onSnapshot(q, (snap) => {
       setEvents(snap.docs.map((d) => ({ id: d.id, ...d.data() } as ScheduleItem)));
       setLoadingSchedule(false);
@@ -247,24 +246,6 @@ export default function ManageScreen() {
     }
   }
 
-  async function moveEvent(index: number, direction: -1 | 1) {
-    if (!weddingId) return;
-    const newIndex = index + direction;
-    if (newIndex < 0 || newIndex >= events.length) return;
-    const reordered = [...events];
-    [reordered[index], reordered[newIndex]] = [reordered[newIndex], reordered[index]];
-    setEvents(reordered);
-    const batch = writeBatch(db);
-    reordered.forEach((item, i) =>
-      batch.update(doc(db, 'weddings', weddingId, 'schedule', item.id), { order: i })
-    );
-    try {
-      await batch.commit();
-    } catch {
-      setEvents(events); // revert optimistic update on failure
-    }
-  }
-
   async function handleDeleteEvent(id: string) {
     if (!weddingId) return;
     Alert.alert('Delete event', 'Remove this event?', [
@@ -281,7 +262,10 @@ export default function ManageScreen() {
   }
 
   async function handleAddEvent() {
-    if (!weddingId || !newFields.title.trim() || !newFields.location.trim()) return;
+    if (!weddingId || !newFields.title.trim() || !newFields.location.trim() || !newFields.day) {
+      Alert.alert('Required', 'Please fill in the title, location, and date.');
+      return;
+    }
     setAddingEvent(true);
     try {
       const startTime = parseTimeToTimestamp(newFields.time, newFields.day);
@@ -289,7 +273,6 @@ export default function ManageScreen() {
         title: newFields.title.trim(),
         location: newFields.location.trim(),
         description: newFields.description.trim() || null,
-        order: events.length,
         startTime,
         icon: newFields.icon.trim() || '✦',
         color: newFields.color,
@@ -396,7 +379,7 @@ export default function ManageScreen() {
             showsVerticalScrollIndicator={false}
             keyboardShouldPersistTaps="handled"
             ListHeaderComponent={<EventForm fields={newFields} onChange={setNewFields} onSubmit={handleAddEvent} submitting={addingEvent} mode="add" />}
-            renderItem={({ item, index }) => {
+            renderItem={({ item }) => {
               if (editingId === item.id) {
                 return (
                   <View style={styles.editCard}>
@@ -414,14 +397,6 @@ export default function ManageScreen() {
               }
               return (
                 <View style={styles.eventRow}>
-                  <View style={styles.moveButtons}>
-                    <TouchableOpacity onPress={() => moveEvent(index, -1)} disabled={index === 0} style={styles.moveBtn}>
-                      <Text style={[styles.moveBtnText, index === 0 && styles.moveBtnDisabled]}>▲</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity onPress={() => moveEvent(index, 1)} disabled={index === events.length - 1} style={styles.moveBtn}>
-                      <Text style={[styles.moveBtnText, index === events.length - 1 && styles.moveBtnDisabled]}>▼</Text>
-                    </TouchableOpacity>
-                  </View>
                   <View style={styles.eventInfo}>
                     <Text style={styles.eventTitle}>{item.primary ? '★ ' : ''}{item.title}</Text>
                     <Text style={styles.eventMeta}>
@@ -1124,10 +1099,6 @@ const styles = StyleSheet.create({
   editCard: { marginVertical: 8, padding: 14, backgroundColor: theme.colors.card, borderRadius: theme.radii.lg, borderWidth: 1, borderColor: theme.colors.lineStrong, ...theme.shadows.s1 },
   sectionLabel: { fontSize: 9, fontWeight: '700', letterSpacing: 1.5, color: theme.colors.ink3, fontFamily: theme.fonts.sans, marginBottom: 8 },
   eventRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 12, borderBottomWidth: 0.5, borderColor: theme.colors.line, gap: 12 },
-  moveButtons: { flexDirection: 'column', alignItems: 'center', gap: 2 },
-  moveBtn: { padding: 3 },
-  moveBtnText: { fontSize: 12, color: theme.colors.accent, fontWeight: '700' },
-  moveBtnDisabled: { color: theme.colors.ink4 },
   eventInfo: { flex: 1 },
   eventTitle: { fontSize: 14, fontWeight: '600', color: theme.colors.ink, fontFamily: theme.fonts.sans },
   eventMeta: { fontSize: 11, color: theme.colors.accent, marginTop: 1, fontFamily: theme.fonts.sans },
