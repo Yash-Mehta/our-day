@@ -15,7 +15,7 @@ import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { useRouter } from 'expo-router';
 import { useAuthStore } from '../../store/authStore';
 import { auth, storage } from '../../lib/firebase';
-import { createMember, addWeddingToIndex } from '../../lib/firestore';
+import { createMember, getMember, addWeddingToIndex } from '../../lib/firestore';
 import { Avatar } from '../../components/Avatar';
 import { theme } from '../../constants/theme';
 
@@ -79,6 +79,16 @@ export default function ProfileSetupScreen() {
     if (!uid) return;
     setLoading(true);
     try {
+      const existing = await getMember(pendingWeddingId, uid);
+      if (existing) {
+        // Already a member — never overwrite, especially don't demote a host to guest
+        await addWeddingToIndex(uid, pendingWeddingId);
+        setUserDoc(existing);
+        setUserWeddingIds(userWeddingIds.includes(pendingWeddingId) ? userWeddingIds : [...userWeddingIds, pendingWeddingId]);
+        setPendingWeddingId(null);
+        router.replace('/select-wedding');
+        return;
+      }
       let photoURL: string | null = null;
       if (avatarUri) photoURL = await uploadAvatar(uid, avatarUri);
       const memberData = {
