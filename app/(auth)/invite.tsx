@@ -45,11 +45,15 @@ export default function InviteScreen() {
       return;
     }
     if (auth.currentUser) {
-      const existing = await getMember(result.weddingId, auth.currentUser.uid);
-      if (existing) {
-        setLoading(false);
-        Alert.alert('Already joined', "You're already part of this wedding.");
-        return;
+      try {
+        const existing = await getMember(result.weddingId, auth.currentUser.uid);
+        if (existing) {
+          setLoading(false);
+          Alert.alert('Already joined', "You're already part of this wedding.");
+          return;
+        }
+      } catch {
+        // Permission denied means user is not a member — proceed normally
       }
     }
     setLoading(false);
