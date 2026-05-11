@@ -63,6 +63,12 @@ function formatDayLabel(iso: string): string {
   return d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
 }
 
+function formatDayShort(iso: string): string {
+  if (!iso) return '';
+  const d = new Date(iso + 'T12:00:00');
+  return d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+}
+
 interface GuestItem extends UserDoc { uid: string }
 interface ScheduleItem {
   id: string;
@@ -452,8 +458,10 @@ export default function ManageScreen() {
                   <View style={styles.eventInfo}>
                     <Text style={styles.eventTitle}>{item.primary ? '★ ' : ''}{item.title}</Text>
                     <Text style={styles.eventMeta}>
-                      {formatTimestamp(item.startTime).time}
-                      {item.dress ? ` · ${item.dress}` : ''}
+                      {(() => {
+                        const { time, day } = formatTimestamp(item.startTime);
+                        return [time, day ? formatDayShort(day) : null, item.dress || null].filter(Boolean).join(' · ');
+                      })()}
                     </Text>
                     <Text style={styles.eventLocation}>{item.location}</Text>
                   </View>
