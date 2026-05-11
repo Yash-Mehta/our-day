@@ -1043,7 +1043,13 @@ function EventForm({ fields, onChange, onSubmit, onCancel, submitting, mode }: F
       <View style={fStyles.row}>
         <View style={{ flex: 1 }}>
           <Text style={fStyles.fieldLabel}>ICON</Text>
-          <TextInput style={fStyles.input} value={fields.icon} onChangeText={set('icon')} placeholder="e.g. ✦ or emoji" placeholderTextColor={theme.colors.ink4} />
+          <TextInput
+            style={fStyles.input}
+            value={fields.icon}
+            onChangeText={(t) => set('icon')([...t][0] ?? '')}
+            placeholder="Tap to pick emoji"
+            placeholderTextColor={theme.colors.ink4}
+          />
         </View>
         <View style={{ width: 12 }} />
         <View style={{ flex: 1 }}>

@@ -128,12 +128,12 @@ const styles = StyleSheet.create({
   time: { fontSize: 12, marginBottom: 3, fontFamily: theme.fonts.sans },
   title: {
     fontSize: 17,
-    fontWeight: '700',
+    fontStyle: 'italic',
     marginBottom: 3,
     color: theme.colors.ink,
-    fontFamily: theme.fonts.sans,
+    fontFamily: theme.fonts.serifItalic,
   },
-  primaryTitle: { fontFamily: theme.fonts.serifItalic, fontStyle: 'italic', fontSize: 20 },
+  primaryTitle: { fontFamily: theme.fonts.sans, fontWeight: '700', fontSize: 20 },
   location: { fontSize: 12, color: theme.colors.ink3, fontFamily: theme.fonts.sans },
   dressBadge: {
     alignSelf: 'flex-start',
