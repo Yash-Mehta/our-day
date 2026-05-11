@@ -42,7 +42,7 @@ export default function ScheduleScreen() {
 
   useEffect(() => {
     if (!weddingId) return;
-    const q = query(scheduleCol(weddingId), orderBy('startTime', 'asc'));
+    const q = query(scheduleCol(weddingId), orderBy('order', 'asc'));
     const unsub = onSnapshot(q, (snap) => {
       setEvents(snap.docs.map((d) => ({ id: d.id, ...d.data() } as ScheduleEvent)));
       setLoading(false);
